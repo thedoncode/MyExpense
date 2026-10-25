@@ -81,6 +81,59 @@ test('text that looks like a formula is written as plain text in Excel', async (
   assert.ok(sst.includes('=HYPERLINK(&quot;http://evil&quot;,&quot;x&quot;)'), 'the name is stored as text');
 });
 
+/* ---------- web server building blocks (server/) ---------- */
+const K = require('../server/crypto');
+const { loadConfig } = require('../server/config');
+test('two-step codes match the RFC 6238 test vectors', () => {
+  const secret = Buffer.from('12345678901234567890');
+  assert.strictEqual(K.totpAt(secret, Math.floor(59 / 30)), '287082');
+  assert.strictEqual(K.totpAt(secret, Math.floor(1111111109 / 30)), '081804');
+  assert.strictEqual(K.totpAt(secret, Math.floor(2000000000 / 30)), '279037');
+  assert.deepStrictEqual(K.unbase32(K.base32(secret)), secret);
+  const now = 1111111109 * 1000;
+  assert.strictEqual(K.checkTotp(secret, '081804', 0, now), Math.floor(1111111109 / 30));
+  assert.strictEqual(K.checkTotp(secret, '081804', Math.floor(1111111109 / 30), now), null, 'a used step is refused');
+  assert.strictEqual(K.checkTotp(secret, '12345', 0, now), null);
+});
+test('sealed data opens only with its key and its own context', () => {
+  const k1 = require('crypto').randomBytes(32), k2 = require('crypto').randomBytes(32);
+  const ring = K.keyring(k1);
+  const sealed = ring.seal(Buffer.from('secret report'), 'report:1:r1');
+  assert.strictEqual(ring.open(sealed, 'report:1:r1').toString(), 'secret report');
+  assert.throws(() => ring.open(sealed, 'report:2:r1'), 'another person');
+  assert.throws(() => K.keyring(k2).open(sealed, 'report:1:r1'), 'another key');
+  const tampered = Buffer.from(sealed); tampered[tampered.length - 1] ^= 1;
+  assert.throws(() => ring.open(tampered, 'report:1:r1'), 'tampering');
+  const rotated = K.keyring(k2, k1);
+  assert.strictEqual(rotated.open(sealed, 'report:1:r1').toString(), 'secret report', 'the previous key still opens old data');
+  assert.ok(!rotated.isCurrent(sealed) && rotated.isCurrent(rotated.seal(Buffer.from('x'), 'c')));
+});
+test('passwords are hashed with scrypt and checked against the rules', async () => {
+  const h = await K.hashPassword('correct horse battery staple');
+  assert.match(h, /^scrypt\$16384\$8\$5\$/);
+  assert.ok(await K.verifyPassword('correct horse battery staple', h));
+  assert.ok(!(await K.verifyPassword('correct horse battery stapl', h)));
+  assert.ok(!(await K.verifyPassword('x', 'md5$abc')));
+  assert.ok(K.passwordProblem('short', 'a@b.co'));
+  assert.ok(K.passwordProblem('password1234', 'a@b.co'));
+  assert.ok(K.passwordProblem('alexandra-is-great', 'alexandra@example.com'));
+  assert.strictEqual(K.passwordProblem('orchid tractor violin', 'a@b.co'), null);
+  const codes = K.newRecoveryCodes();
+  assert.strictEqual(new Set(codes).size, 10);
+  assert.ok(K.recoveryHash(codes[0]).equals(K.recoveryHash(codes[0].toLowerCase().replace(/-/g, ' '))));
+});
+test('the server refuses to start with unsafe settings', () => {
+  const ok = { APP_ORIGIN: 'https://expenses.example.com', DB_USER: 'u', DB_PASSWORD: 'p', DB_NAME: 'd', DATA_KEY: require('crypto').randomBytes(32).toString('base64') };
+  assert.strictEqual(loadConfig(ok).origin, 'https://expenses.example.com');
+  assert.throws(() => loadConfig({ ...ok, APP_ORIGIN: 'http://expenses.example.com' }), /https/);
+  assert.throws(() => loadConfig({ ...ok, DATA_KEY: '' }), /DATA_KEY/);
+  assert.throws(() => loadConfig({ ...ok, DATA_KEY: 'c2hvcnQ=' }), /32 random bytes/);
+  assert.throws(() => loadConfig({ ...ok, SETUP_TOKEN: 'abc' }), /SETUP_TOKEN/);
+  assert.throws(() => loadConfig({ ...ok, DB_PASSWORD: '' }), /DB_PASSWORD/);
+  assert.throws(() => loadConfig({ ...ok, APP_ENV: 'dev' }), /APP_ENV/);
+  assert.throws(() => loadConfig({ ...ok, ANTHROPIC_BASE_URL: 'http://evil.example' }), /https/);
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of tests) {
