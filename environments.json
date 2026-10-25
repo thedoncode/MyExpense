@@ -2,14 +2,12 @@
   "prod": {
     "title": "MyExpense",
     "branch": "main",
-    "storageKey": "expenseme",
     "banner": "",
     "artifact": "https://claude.ai/artifact/Hx6y2N1JsE6MaqoAhVJSW1"
   },
   "qa": {
     "title": "MyExpense QA",
     "branch": "qa",
-    "storageKey": "myexpense-qa",
     "banner": "QA environment · test data only",
     "artifact": "https://claude.ai/artifact/NVoETTZKp8hEuGwybEEbA4"
   }

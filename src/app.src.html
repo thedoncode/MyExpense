@@ -188,6 +188,8 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); font-size: 14px; }
 .banner p { flex: 1; min-width: 200px; color: var(--ink); }
 .store-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.gate { display: grid; gap: 12px; justify-items: start; max-width: 520px; padding: 28px 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.gate-icon { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); }
 
 /* itemized capture */
 .capture { display: grid; gap: 10px; padding: 14px; border: 1.5px dashed var(--line); border-radius: var(--r); background: var(--surface-2); }
@@ -270,9 +272,10 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 
 <div id="app"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Libraries are pinned and integrity-checked: the browser refuses any copy that differs by a byte. -->
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js" integrity="sha384-w94Y7k7ToXbmIx5Vi/LxHtprASwddoLhbR/0ZhekgNn8pP9VNRRHzmp2tqrALfKY" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script>
 /*__CORE__*/
 </script>
@@ -282,9 +285,15 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 const C = window.ExpenseCore;
 const LAYOUTS = /*__LAYOUTS__*/null;
 const TPL = { itemized: '/*__TPL_IT__*/', perdiem: '/*__TPL_PD__*/' };
-const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+// pdf.js, loaded only when someone adds a PDF receipt. Pinned + integrity-checked, and run with
+// isEvalSupported:false, which blocks CVE-2024-4367 (script injection through crafted PDF fonts).
+const PDFJS = {
+  lib: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js', 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e'],
+  worker: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js', 'sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2'],
+};
+const MAX_UPLOAD = 25 * 1024 * 1024; // per file
 // Set per environment by build.js (environments.json)
-const ENV = /*__ENV__*/{ name: 'prod', title: 'MyExpense', storageKey: 'expenseme', banner: '' };
+const ENV = /*__ENV__*/{ name: 'prod', title: 'MyExpense', banner: '' };
 
 if (!window.htmPreact) {
   document.getElementById('app').innerHTML = '<div class="wrap"><div class="panel panel-b"><h2>MyExpense couldn’t load</h2><p class="muted">A required script didn’t load. Check your connection and reload the page.</p></div></div>';
@@ -305,7 +314,14 @@ function rangeText(a, b) {
   const ya = a.slice(0, 4), yb = b.slice(0, 4);
   return C.fmtMonD(a) + (ya !== yb ? ', ' + ya : '') + ' – ' + C.fmtMonD(b) + ', ' + yb;
 }
-function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s); }); }
+function loadScript([src, integrity]) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.integrity = integrity; s.crossOrigin = 'anonymous';
+    s.onload = res; s.onerror = () => rej(new Error('Couldn’t load the PDF reader. Check your connection and try again.'));
+    document.head.appendChild(s);
+  });
+}
 
 /* ---------- icons ---------- */
 const P = {
@@ -314,56 +330,24 @@ const P = {
   check: 'M5 12l5 5 9-10', alert: 'M12 8v5M12 16.5v.5M10.3 4.2L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z',
   cloud: 'M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.5 1.5A3.5 3.5 0 0 1 17.5 18z', phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
   receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3', cal: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5', x: 'M6 6l12 12M18 6L6 18',
-  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', download: 'M12 4v12M7 11l5 5 5-5M5 20h14', sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', download: 'M12 4v12M7 11l5 5 5-5M5 20h14', sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
 };
 const Icon = ({ n, size }) => html`<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style=${size ? 'width:' + size + 'px;height:' + size + 'px' : ''}><path d=${P[n]} /></svg>`;
 
-/* ---------- services: storage, Claude, downloads ---------- */
+/* ---------- services: sign-in, private storage, Claude, downloads ---------- */
+// Every report and receipt lives in the signed-in person's private area of this app's database,
+// data/users/<their id>/. The platform enforces that privacy on the server: nobody else can read or
+// write it, including the app's owner. Nothing is kept on the device.
 const bus = new Set();
 const emit = () => bus.forEach(f => f());
-const Svc = { ready: false, store: null, device: null, cloud: null, inViewer: !!(window.claude && typeof window.claude.use === 'function'), sample: null, aiImages: null, downloads: null, memoryOnly: false };
+const Svc = {
+  ready: false, store: null, sample: null, aiImages: null, downloads: null,
+  inViewer: !!(window.claude && typeof window.claude.use === 'function'),
+  access: 'checking', // checking | ok | outside | signed-out | no-access | error
+};
 
-function idbOpen() {
-  return new Promise((res, rej) => {
-    const rq = indexedDB.open(ENV.storageKey, 1); // prod keeps the first version's key so saved reports stay
-    rq.onupgradeneeded = () => { const db = rq.result; ['reports', 'images', 'kv'].forEach(n => { if (!db.objectStoreNames.contains(n)) db.createObjectStore(n); }); };
-    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); rq.onblocked = () => rej(new Error('blocked'));
-  });
-}
-function idb(db, store, mode, fn) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store, mode); const rq = fn(tx.objectStore(store));
-    tx.oncomplete = () => res(rq ? rq.result : undefined); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
-  });
-}
-class DeviceStore {
-  constructor(db) { this.db = db; this.kind = 'device'; }
-  async listReports() { return (await idb(this.db, 'reports', 'readonly', os => os.getAll())) || []; }
-  saveReport(r) { return idb(this.db, 'reports', 'readwrite', os => os.put(JSON.parse(JSON.stringify(r)), r.id)); }
-  deleteReport(id) { return idb(this.db, 'reports', 'readwrite', os => os.delete(id)); }
-  putImage(id, blob, meta, orig) { return idb(this.db, 'images', 'readwrite', os => os.put({ blob, w: meta.w, h: meta.h, orig: orig || null }, id)); }
-  async getImage(id) { return (await idb(this.db, 'images', 'readonly', os => os.get(id))) || null; }
-  async getOriginal(id) { const x = await this.getImage(id); return x && x.orig ? x.orig : null; }
-  deleteImage(id) { return idb(this.db, 'images', 'readwrite', os => os.delete(id)); }
-  async getSettings() { return (await idb(this.db, 'kv', 'readonly', os => os.get('settings'))) || {}; }
-  saveSettings(s) { return idb(this.db, 'kv', 'readwrite', os => os.put(s, 'settings')); }
-}
-class MemoryStore {
-  constructor() { this.kind = 'memory'; this.r = new Map(); this.i = new Map(); this.s = {}; }
-  async listReports() { return [...this.r.values()]; }
-  async saveReport(r) { this.r.set(r.id, JSON.parse(JSON.stringify(r))); }
-  async deleteReport(id) { this.r.delete(id); }
-  async putImage(id, blob, meta, orig) { this.i.set(id, { blob, w: meta.w, h: meta.h, orig: orig || null }); }
-  async getImage(id) { return this.i.get(id) || null; }
-  async getOriginal(id) { const x = this.i.get(id); return x && x.orig ? x.orig : null; }
-  async deleteImage(id) { this.i.delete(id); }
-  async getSettings() { return this.s; }
-  async saveSettings(s) { this.s = s; }
-}
-// Private per-person storage in the artifact's database: data/users/<id>/...
-class CloudStore {
+class PrivateStore {
   constructor(db, id) {
-    this.kind = 'cloud';
     const root = db.doc('data/users/' + id + '/app');
     this.reports = root.collection('reports'); this.images = root.collection('images'); this.chunks = root.collection('chunks');
     this.settingsDoc = db.doc('data/users/' + id + '/settings');
@@ -406,45 +390,62 @@ class CloudStore {
   async deleteImage(id) {
     const m = await this.images.doc(id).get();
     const n = m.exists ? m.data().n : 0, on = m.exists ? (m.data().on || 0) : 0;
-    await this.images.doc(id).delete();
     for (let k = 0; k < n; k++) await this.chunks.doc(id + '.' + k).delete();
     for (let k = 0; k < on; k++) await this.chunks.doc(id + '.o.' + k).delete();
+    await this.images.doc(id).delete();
   }
   async getSettings() { const s = await this.settingsDoc.get(); return s.exists ? s.data() : {}; }
   saveSettings(s) { const body = JSON.parse(JSON.stringify(s)); return this.serial('settings', () => this.settingsDoc.set(body)); }
+  // Erase everything this person has stored
+  async deleteAll() {
+    for (const r of await this.listReports()) await this.reports.doc(r.id).delete();
+    let snap;
+    do { snap = await this.images.limit(50).get(); for (const d of snap.docs) await this.deleteImage(d.id); } while (snap.size === 50);
+    do { snap = await this.chunks.limit(10).get(); for (const d of snap.docs) await this.chunks.doc(d.id).delete(); } while (snap.size === 10);
+    await this.settingsDoc.delete();
+  }
 }
 
 async function initServices() {
-  try { Svc.device = new DeviceStore(await idbOpen()); }
-  catch (e) { Svc.device = new MemoryStore(); Svc.memoryOnly = true; }
-  Svc.store = Svc.device;
-  if (Svc.inViewer) {
-    const use = (n) => window.claude.use(n).catch(() => null);
-    const [db, user, sample, downloads] = await Promise.all([use('db'), use('user'), use('sample'), use('downloads')]);
-    Svc.downloads = downloads;
-    if (sample) {
-      Svc.sample = sample;
-      try { const lim = await sample.limits(); Svc.aiImages = lim && lim.images ? lim.images : null; } catch (e) { Svc.aiImages = null; }
-    }
-    if (db && user) {
-      try {
-        const id = await user.id();
-        const can = await user.can('data.write');
-        if (id && can !== false) { Svc.cloud = new CloudStore(db, id); await Svc.cloud.getSettings(); Svc.store = Svc.cloud; }
-      } catch (e) { Svc.cloud = null; }
-    }
+  if (!Svc.inViewer) { Svc.access = 'outside'; Svc.ready = true; emit(); return; }
+  const use = (n) => window.claude.use(n).catch(() => null);
+  const [db, user, sample, downloads] = await Promise.all([use('db'), use('user'), use('sample'), use('downloads')]);
+  Svc.downloads = downloads;
+  if (sample) {
+    Svc.sample = sample;
+    try { const lim = await sample.limits(); Svc.aiImages = lim && lim.images ? lim.images : null; } catch (e) { Svc.aiImages = null; }
+  }
+  if (!db || !user) Svc.access = 'signed-out';
+  else {
+    try {
+      const id = await user.id();
+      if (!id) Svc.access = 'signed-out';
+      else { Svc.store = new PrivateStore(db, id); await Svc.store.getSettings(); Svc.access = 'ok'; }
+    } catch (e) { Svc.store = null; Svc.access = 'error'; }
   }
   Svc.ready = true; emit();
 }
 const aiOn = () => !!(Svc.sample && Svc.aiImages);
 
-async function fallBackToDevice(e) {
-  if (Svc.store !== Svc.cloud) return false;
+// Someone who can open the page but isn't allowed to save (or whose access was removed) is stopped
+// at the first refused write: whatever was in memory is dropped and the access screen shows.
+const ACCESS_ERRORS = ['invalid_argument', 'revoked', 'not_granted', 'capability_disabled', 'capability_removed'];
+function lostAccess() {
+  for (const t of timers.values()) clearTimeout(t);
+  timers.clear();
+  for (const u of urlCache.values()) URL.revokeObjectURL(u);
+  urlCache.clear();
+  Model.reports = []; Model.settings = {}; Model.loaded = false;
+  Svc.store = null; Svc.access = 'no-access'; emit();
+}
+// Returns true when the caller may retry later
+function writeFailed(e, what) {
   const code = e && e.code;
-  if (code === 'quota_exceeded') { toast('Your saved space is full. Delete an old report to make room.'); return false; }
-  if (code === 'unavailable' || code === 'resource_exhausted') return false;
-  Svc.store = Svc.device; Svc.cloud = null; emit();
-  toast('Couldn’t save to your Claude account, so MyExpense is saving on this device instead.');
+  if (ACCESS_ERRORS.includes(code)) {
+    if (code === 'invalid_argument' && what && JSON.stringify(what).length > 240000) { toast('This report is too large to save. Split it into two reports.'); return false; }
+    lostAccess(); return false;
+  }
+  if (code === 'quota_exceeded') { toast('MyExpense’s storage is full. Delete reports you’ve already submitted, then try again.'); return false; }
   return true;
 }
 
@@ -466,31 +467,39 @@ const Model = {
     clearTimeout(timers.get(id)); timers.delete(id);
     this.reports = this.reports.filter(x => x.id !== id); emit();
     const imgs = new Set((r.charges || []).map(c => c.imageId).filter(Boolean));
-    try { await Svc.store.deleteReport(id); for (const i of imgs) await Svc.store.deleteImage(i).catch(() => {}); } catch (e) { toast('Couldn’t delete that report. Try again.'); }
+    try { await Svc.store.deleteReport(id); for (const i of imgs) await Svc.store.deleteImage(i).catch(() => {}); }
+    catch (e) { if (writeFailed(e)) toast('Couldn’t delete that report. Try again.'); }
   },
   async saveSettings(s) {
     this.settings = s; emit();
-    try { await Svc.store.saveSettings(s); } catch (e) { if (await fallBackToDevice(e)) await Svc.store.saveSettings(s).catch(() => {}); }
+    try { await Svc.store.saveSettings(s); } catch (e) { if (writeFailed(e)) toast('Couldn’t save your details. Try again.'); }
   },
 };
 const timers = new Map();
+const retries = new Map();
 function setSave(s) { Model.saveState = s; emit(); }
 function schedule(id) { clearTimeout(timers.get(id)); setSave('saving'); timers.set(id, setTimeout(() => persist(id), 600)); }
 async function persist(id) {
   timers.delete(id);
-  const r = Model.get(id); if (!r) return;
-  try { await Svc.store.saveReport(r); if (!timers.size) setSave('saved'); }
+  const r = Model.get(id); if (!r || !Svc.store) return;
+  try { await Svc.store.saveReport(r); retries.delete(id); if (!timers.size) setSave('saved'); }
   catch (e) {
-    if (await fallBackToDevice(e)) { try { await Svc.store.saveReport(r); setSave('saved'); return; } catch (e2) { /* fallthrough */ } }
-    setSave('error');
+    if (!writeFailed(e, r)) { if (Svc.access === 'ok') setSave('error'); return; }
+    const n = (retries.get(id) || 0) + 1; retries.set(id, n);
+    setSave('retrying');
+    timers.set(id, setTimeout(() => persist(id), Math.min(60000, 2000 * 2 ** n) + Math.random() * 1000));
   }
 }
 async function flush(id) { if (timers.has(id)) { clearTimeout(timers.get(id)); await persist(id); } }
 async function loadAll() {
-  const [list, s] = await Promise.all([Svc.store.listReports().catch(() => []), Svc.store.getSettings().catch(() => ({}))]);
-  Model.settings = s || {};
-  Model.reports = list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  Model.loaded = true; emit();
+  try {
+    const [list, s] = await Promise.all([Svc.store.listReports(), Svc.store.getSettings()]);
+    Model.settings = s || {};
+    Model.reports = list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    Model.loaded = true; emit();
+  } catch (e) {
+    if (ACCESS_ERRORS.includes(e && e.code)) lostAccess(); else { Svc.access = 'error'; emit(); }
+  }
 }
 function useTick() { const [, set] = useState(0); useEffect(() => { const f = () => set(x => x + 1); bus.add(f); return () => bus.delete(f); }, []); }
 
@@ -517,8 +526,8 @@ async function scaleToJpeg(src, maxSide, q) {
 }
 async function loadPdfJs() {
   if (window.pdfjsLib && window.pdfjsWorker) return window.pdfjsLib;
-  await loadScript(PDFJS + 'pdf.min.js');
-  await loadScript(PDFJS + 'pdf.worker.min.js'); // runs pdf.js on the page itself
+  await loadScript(PDFJS.lib);
+  await loadScript(PDFJS.worker); // runs pdf.js on the page itself
   return window.pdfjsLib;
 }
 async function processFile(file) {
@@ -530,7 +539,7 @@ async function processFile(file) {
     return { blob: out.blob, w: out.w, h: out.h, aiBlobs: [out.blob] };
   }
   const lib = await loadPdfJs();
-  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
   const pages = Math.min(pdf.numPages, 3);
   const canvases = [];
   for (let p = 1; p <= pages; p++) {
@@ -556,7 +565,7 @@ function useImageURL(id) {
   const [url, setUrl] = useState(urlCache.get(id) || null);
   useEffect(() => {
     let live = true;
-    if (!id) { setUrl(null); return; }
+    if (!id || !Svc.store) { setUrl(null); return; }
     if (urlCache.has(id)) { setUrl(urlCache.get(id)); return; }
     Svc.store.getImage(id).then(img => { if (img && img.blob) { const u = URL.createObjectURL(img.blob); urlCache.set(id, u); if (live) setUrl(u); } }).catch(() => {});
     return () => { live = false; };
@@ -625,7 +634,9 @@ async function expandFiles(files) {
   return out;
 }
 async function addFiles(reportId, files) {
-  const list = (await expandFiles([...files])).filter(f => /^image\//.test(f.type) || f.type === 'application/pdf' || /\.(pdf|jpe?g|png|heic|webp)$/i.test(f.name || ''));
+  const tooBig = [...files].filter(f => f.size > MAX_UPLOAD);
+  if (tooBig.length) toast(tooBig.map(f => f.name || 'A file').join(', ') + ' is over 25 MB, so it was skipped.');
+  const list = (await expandFiles([...files].filter(f => f.size <= MAX_UPLOAD))).filter(f => /^image\//.test(f.type) || f.type === 'application/pdf' || /\.(pdf|jpe?g|png|heic|webp)$/i.test(f.name || ''));
   if (!list.length) { toast('Choose a photo, PDF or Word file with the receipts.'); return; }
   for (const file of list) {
     const cid = uid('c');
@@ -633,8 +644,9 @@ async function addFiles(reportId, files) {
     try {
       const img = await processFile(file);
       const imageId = uid('i');
+      if (!Svc.store) return;
       try { await Svc.store.putImage(imageId, img.blob, { w: img.w, h: img.h }, img.orig); }
-      catch (e) { if (await fallBackToDevice(e)) await Svc.store.putImage(imageId, img.blob, { w: img.w, h: img.h }, img.orig); else throw e; }
+      catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the photo. Check your connection and add it again.'); }
       const reading = aiOn();
       Model.update(reportId, r => patchCharge(r, cid, { imageId, ai: reading ? 'reading' : null, currency: reading ? null : 'CAD' }));
       if (reading) queueAI({ reportId, chargeId: cid, blobs: img.aiBlobs });
@@ -738,45 +750,38 @@ function EnvBand() {
   return ENV.banner ? html`<div class="envband" role="note">${ENV.banner}</div>` : null;
 }
 function StorePill() {
-  if (!Svc.ready) return null;
-  const k = Svc.store && Svc.store.kind;
-  if (k === 'cloud') return html`<span class="store-pill" title="Your reports and photos are private to you"><${Icon} n="cloud" size=${16} />Saved to your Claude account</span>`;
-  if (k === 'memory') return html`<span class="store-pill" style="color:var(--bad)"><${Icon} n="alert" size=${16} />Not saved: this browser blocks storage</span>`;
-  return html`<span class="store-pill"><${Icon} n="phone" size=${16} />Saved on this device</span>`;
+  if (Svc.access !== 'ok') return null;
+  return html`<span class="store-pill"><${Icon} n="lock" size=${16} />Private to you: only you can see these reports</span>`;
 }
 function SaveState() {
   const s = Model.saveState;
   if (s === 'saving') return html`<span>Saving…</span>`;
-  if (s === 'error') return html`<span style="color:var(--bad)">Not saved. Check your connection.</span>`;
-  if (s === 'saved') return html`<span>${Svc.store && Svc.store.kind === 'cloud' ? 'Saved to your account' : 'Saved on this device'}</span>`;
+  if (s === 'retrying') return html`<span style="color:var(--warn)">Not saved yet. Retrying…</span>`;
+  if (s === 'error') return html`<span style="color:var(--bad)">Not saved</span>`;
+  if (s === 'saved') return html`<span>Saved</span>`;
   return null;
+}
+
+// Shown instead of the app whenever this viewer can't have a private, saved area of their own.
+function AccessGate() {
+  const k = Svc.access;
+  const copy = {
+    outside: ['Open MyExpense from its Claude link', 'Each person’s expenses are tied to their own Claude account and kept private to them, so MyExpense only works from its link on claude.ai while you’re signed in.'],
+    'signed-out': ['Sign in to use MyExpense', 'Your expense reports are tied to your Claude account. Sign in to claude.ai, then open this link again.'],
+    'no-access': ['You can’t save expenses here yet', 'You can open this page, but your access doesn’t let you add expenses. Ask the person who shared MyExpense with you for access that lets you use it. Nothing you entered was saved.'],
+    error: ['Your reports couldn’t be loaded', 'MyExpense couldn’t reach your saved reports. Check your connection, then reload the page.'],
+  }[k];
+  if (!copy) return html`<div class="wrap"><div class="list"><div class="skel"></div><div class="skel"></div></div></div>`;
+  return html`<div class="wrap"><div class="gate">
+    <span class="gate-icon"><${Icon} n="lock" size=${26} /></span>
+    <h1>${copy[0]}</h1>
+    <p class="muted">${copy[1]}</p>
+    <p class="faint small">MyExpense never shows one person’s expenses to anyone else, including the person who shared it.</p>
+  </div></div>`;
 }
 
 function Home({ open, openSettings }) {
   const reps = Model.reports;
-  const [moving, setMoving] = useState(false);
-  const [deviceCount, setDeviceCount] = useState(0);
-  useEffect(() => {
-    if (Svc.store && Svc.store.kind === 'cloud' && Svc.device && Svc.device.kind === 'device') Svc.device.listReports().then(l => setDeviceCount(l.length)).catch(() => {});
-    else setDeviceCount(0);
-  }, [Svc.store]);
-  async function moveToAccount() {
-    setMoving(true);
-    try {
-      const list = await Svc.device.listReports();
-      for (const r of list) {
-        for (const id of new Set((r.charges || []).map(c => c.imageId).filter(Boolean))) {
-          const img = await Svc.device.getImage(id); if (img) await Svc.cloud.putImage(id, img.blob, img, img.orig || null);
-        }
-        await Svc.cloud.saveReport(r);
-        for (const id of new Set((r.charges || []).map(c => c.imageId).filter(Boolean))) await Svc.device.deleteImage(id).catch(() => {});
-        await Svc.device.deleteReport(r.id);
-      }
-      toast('Moved ' + plural(list.length, 'report') + ' to your account.');
-      setDeviceCount(0); await loadAll();
-    } catch (e) { toast('Couldn’t move everything. Try again.'); }
-    setMoving(false);
-  }
   const name = Model.settings.name;
   return html`
   <div class="wrap">
@@ -787,8 +792,6 @@ function Home({ open, openSettings }) {
       </div>
       <button class="btn sm" onClick=${openSettings}><${Icon} n="user" size=${18} />${name ? 'Your details' : 'Add your name'}</button>
     </div>
-    ${deviceCount > 0 && html`<div class="banner"><${Icon} n="phone" /><p>${plural(deviceCount, 'report')} ${deviceCount === 1 ? 'is' : 'are'} saved only on this device.</p><button class="btn sm" disabled=${moving} onClick=${moveToAccount}>${moving ? 'Moving…' : 'Move to your account'}</button></div>`}
-    ${Svc.memoryOnly && html`<div class="banner"><${Icon} n="alert" /><p>This browser isn’t letting MyExpense save anything. Download your files before you close this page.</p></div>`}
     <div class="start">
       <button class="start-card" onClick=${() => open(newReport('perdiem'), true)}>
         <div class="row"><span class="tag pd">Per diem</span><${Icon} n="cal" /></div>
@@ -801,9 +804,9 @@ function Home({ open, openSettings }) {
         <p class="muted small">Snap your Uber, rental, baggage and fuel receipts. Each charge lands on its day in the right week.</p>
       </button>
     </div>
-    <div class="section-h"><h2>Saved reports</h2>${Model.loaded && reps.length > 0 && html`<span class="muted small">${plural(reps.length, 'report')}</span>`}</div>
+    <div class="section-h"><h2>Your reports</h2>${Model.loaded && reps.length > 0 && html`<span class="muted small">${plural(reps.length, 'report')}</span>`}</div>
     ${!Model.loaded ? html`<div class="list"><div class="skel"></div><div class="skel"></div></div>`
-      : reps.length === 0 ? html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No reports yet</b><p class="small">Start a per diem or itemized report above. Reports save as you type, and you can come back to download or print them anytime.</p></div>`
+      : reps.length === 0 ? html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No reports yet</b><p class="small">Start a per diem or itemized report above. Reports save as you type, and only you can see them.</p></div>`
       : html`<div class="list">${reps.map(r => html`<${ReportCard} key=${r.id} r=${r} onOpen=${() => open(r)} />`)}</div>`}
   </div>`;
 }
@@ -1052,7 +1055,7 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
     if (!ok) return;
     Model.update(reportId, r => {
       const charges = r.charges.filter(x => x.id !== c.id);
-      if (c.imageId && !charges.some(x => x.imageId === c.imageId)) Svc.store.deleteImage(c.imageId).catch(() => {});
+      if (c.imageId && Svc.store && !charges.some(x => x.imageId === c.imageId)) Svc.store.deleteImage(c.imageId).catch(() => {});
       return { ...r, charges };
     });
   }
@@ -1189,19 +1192,36 @@ function ExportSheet({ r, onClose }) {
 function SettingsSheet({ onClose }) {
   const [name, setName] = useState(Model.settings.name || '');
   const [mgr, setMgr] = useState(Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron');
-  const k = Svc.store && Svc.store.kind;
+  const [wiping, setWiping] = useState(false);
+  async function wipe() {
+    const ok = await askConfirm({ title: 'Delete all your MyExpense data?', body: 'Every report, receipt photo and saved detail of yours is erased for good. Download anything you still need first.', yes: 'Delete everything', danger: true });
+    if (!ok) return;
+    setWiping(true);
+    for (const t of timers.values()) clearTimeout(t);
+    timers.clear();
+    try {
+      await Svc.store.deleteAll();
+      for (const u of urlCache.values()) URL.revokeObjectURL(u);
+      urlCache.clear();
+      Model.reports = []; Model.settings = {}; emit();
+      toast('All your MyExpense data was deleted.');
+      onClose();
+    } catch (e) { if (writeFailed(e)) toast('Couldn’t delete everything. Try again.'); }
+    setWiping(false);
+  }
   return html`<div class="scrim" onClick=${e => { if (e.target === e.currentTarget) onClose(); }}>
     <form class="sheet" role="dialog" aria-label="Your details" onSubmit=${e => { e.preventDefault(); Model.saveSettings({ ...Model.settings, name: name.trim(), manager: mgr.trim() }); toast('Saved. New reports start with these details.'); onClose(); }}>
       <div class="sheet-h"><h2>Your details</h2><button type="button" class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
       <p class="muted small">New reports start with these. You can still change them on any report.</p>
       <${Field} id="set-name" label="Your full name"><${TextInput} id="set-name" value=${name} autocomplete="name" placeholder="First and last name" onValue=${setName} /><//>
       <${Field} id="set-mgr" label="Manager name (itemized reports)"><${TextInput} id="set-mgr" value=${mgr} placeholder="Manager" onValue=${setMgr} /><//>
-      <div class="terms" style="display:grid;gap:4px">
-        <b style="font-family:var(--f-body)">${k === 'cloud' ? 'Saved to your Claude account' : k === 'memory' ? 'Not being saved' : 'Saved on this device'}</b>
-        <span class="muted">${k === 'cloud' ? 'Reports and receipt photos are private to you and open on any device where you use this page in Claude.' : k === 'memory' ? 'This browser blocks storage. Download your files before closing the page.' : 'Reports and photos stay in this browser on this device. Open this page in Claude while signed in to keep them in your account instead.'}</span>
-        <span class="muted">${aiOn() ? 'Receipt reading by Claude is on.' : 'Receipt reading by Claude isn’t available here, so you’ll type in the details from each photo.'}</span>
-      </div>
       <button class="btn primary" type="submit">Save details</button>
+      <div class="terms" style="display:grid;gap:4px">
+        <b style="font-family:var(--f-body)">Your privacy</b>
+        <span class="muted">Your reports and receipt photos are stored for your Claude account only. No one else who uses MyExpense can see them, including the person who shared it. Nothing is kept on this device.</span>
+        <span class="muted">${aiOn() ? 'When you add a receipt, the photo is sent to Claude to read the details.' : 'Receipt reading by Claude isn’t available here, so you’ll type in the details from each photo.'}</span>
+      </div>
+      <button type="button" class="btn ghost danger" disabled=${wiping} onClick=${wipe}><${Icon} n="trash" size=${18} />${wiping ? 'Deleting…' : 'Delete all my data'}</button>
     </form>
   </div>`;
 }
@@ -1252,7 +1272,8 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const loadedOnce = useRef(false);
   useEffect(() => { initServices(); }, []);
-  useEffect(() => { if (Svc.ready && !loadedOnce.current) { loadedOnce.current = true; loadAll(); } });
+  useEffect(() => { if (Svc.access === 'ok' && !loadedOnce.current) { loadedOnce.current = true; loadAll(); } });
+  useEffect(() => { if (Svc.access !== 'ok' && Svc.ready) { loadedOnce.current = false; if (route.view !== 'home') setRoute({ view: 'home' }); setSettingsOpen(false); } });
   function open(r, isNew) {
     if (isNew) Model.add(r);
     setRoute({ view: 'edit', id: r.id }); window.scrollTo(0, 0);
@@ -1262,15 +1283,16 @@ function App() {
     if (!deleted && id) {
       const r = Model.get(id);
       if (r && isBlank(r)) await Model.remove(id); else await flush(id);
-      if (Model.settings.name && r && r.name && !(await Svc.store.getSettings().catch(() => ({}))).name) Model.saveSettings({ ...Model.settings });
+      if (Svc.store && Model.settings.name && r && r.name && !(await Svc.store.getSettings().catch(() => ({}))).name) Model.saveSettings({ ...Model.settings });
     }
     Model.reports = Model.reports.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     setSave('idle'); setRoute({ view: 'home' }); window.scrollTo(0, 0);
   }
   return html`
-    ${route.view === 'home' && html`<header class="bar"><${EnvBand} /><div class="bar-in"><div class="wordmark"><span class="stub" aria-hidden="true"></span>MyExpense${ENV.name !== 'prod' && html`<span class="envtag">${ENV.name.toUpperCase()}</span>`}</div></div></header>`}
-    ${route.view === 'home' ? html`<${Home} open=${open} openSettings=${() => setSettingsOpen(true)} />` : html`<${Editor} key=${route.id} id=${route.id} back=${back} />`}
-    ${settingsOpen && html`<${SettingsSheet} onClose=${() => setSettingsOpen(false)} />`}
+    ${(route.view === 'home' || Svc.access !== 'ok') && html`<header class="bar"><${EnvBand} /><div class="bar-in"><div class="wordmark"><span class="stub" aria-hidden="true"></span>MyExpense${ENV.name !== 'prod' && html`<span class="envtag">${ENV.name.toUpperCase()}</span>`}</div></div></header>`}
+    ${Svc.access !== 'ok' ? html`<${AccessGate} />`
+      : route.view === 'home' ? html`<${Home} open=${open} openSettings=${() => setSettingsOpen(true)} />` : html`<${Editor} key=${route.id} id=${route.id} back=${back} />`}
+    ${settingsOpen && Svc.access === 'ok' && html`<${SettingsSheet} onClose=${() => setSettingsOpen(false)} />`}
     <${ConfirmDialog} />
     <div class="toasts" aria-live="polite">${toastList.map(t => html`<div class="toast" key=${t.id}>${t.msg}</div>`)}</div>`;
 }
