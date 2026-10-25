@@ -1,0 +1,19 @@
+{
+  "name": "myexpense",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Phone-friendly per diem and itemized travel expense reports that download as the official Excel forms, print-ready PDFs and receipt bundles.",
+  "scripts": {
+    "build": "node build.js",
+    "layouts": "python3 tools/extract_layout.py",
+    "test": "node test/generate.js && python3 test/verify.py",
+    "test:e2e": "node test/e2e.js"
+  },
+  "devDependencies": {
+    "htm": "3.1.1",
+    "jspdf": "2.5.1",
+    "jszip": "3.10.1",
+    "pdfjs-dist": "3.11.174",
+    "playwright": "^1.47.0"
+  }
+}
