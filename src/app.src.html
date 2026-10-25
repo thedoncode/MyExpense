@@ -274,8 +274,8 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 
 <!-- Libraries are pinned and integrity-checked: the browser refuses any copy that differs by a byte. -->
 <script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js" integrity="sha384-w94Y7k7ToXbmIx5Vi/LxHtprASwddoLhbR/0ZhekgNn8pP9VNRRHzmp2tqrALfKY" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.2/dist/jszip.min.js" integrity="sha384-DdGlNq+wVXAn83gXqwyeFHB7iyXy6L0rLrNzgDmhKWPjiJLg9vj6qosYmZmkMfQ+" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js" integrity="sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3" crossorigin="anonymous"></script>
 <script>
 /*__CORE__*/
 </script>
@@ -285,11 +285,11 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 const C = window.ExpenseCore;
 const LAYOUTS = /*__LAYOUTS__*/null;
 const TPL = { itemized: '/*__TPL_IT__*/', perdiem: '/*__TPL_PD__*/' };
-// pdf.js, loaded only when someone adds a PDF receipt. Pinned + integrity-checked, and run with
-// isEvalSupported:false, which blocks CVE-2024-4367 (script injection through crafted PDF fonts).
+// pdf.js, loaded only when someone adds a PDF receipt. Pinned and integrity-checked (the legacy build,
+// for older phones). pdf.js 6 has no eval code path (CVE-2024-4367 is fixed upstream); XFA stays off.
 const PDFJS = {
-  lib: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js', 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e'],
-  worker: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js', 'sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2'],
+  lib: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs', 'sha384-oPqHr8MeYfJpkh4zgHbWYiuwabTzthRiOS5tSWsWGmCVWlwqIkS9coGro5aa48OF'],
+  worker: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs', 'sha384-tINN5IYq7dFaoHBUBBc2yfxGwR38mZn9GhaX31UofKYNgAg/3y8A7IjUI3GuEg/8'],
 };
 const MAX_UPLOAD = 25 * 1024 * 1024; // per file
 // Set per environment by build.js (environments.json)
@@ -317,6 +317,7 @@ function rangeText(a, b) {
 function loadScript([src, integrity]) {
   return new Promise((res, rej) => {
     const s = document.createElement('script');
+    if (/\.mjs$/.test(src)) s.type = 'module';
     s.src = src; s.integrity = integrity; s.crossOrigin = 'anonymous';
     s.onload = res; s.onerror = () => rej(new Error('Couldn’t load the PDF reader. Check your connection and try again.'));
     document.head.appendChild(s);
@@ -494,8 +495,8 @@ async function flush(id) { if (timers.has(id)) { clearTimeout(timers.get(id)); a
 async function loadAll() {
   try {
     const [list, s] = await Promise.all([Svc.store.listReports(), Svc.store.getSettings()]);
-    Model.settings = s || {};
-    Model.reports = list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    Model.settings = C.cleanSettings(s);
+    Model.reports = list.map(C.cleanReport).filter(Boolean).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // validate everything read back
     Model.loaded = true; emit();
   } catch (e) {
     if (ACCESS_ERRORS.includes(e && e.code)) lostAccess(); else { Svc.access = 'error'; emit(); }
@@ -526,8 +527,9 @@ async function scaleToJpeg(src, maxSide, q) {
 }
 async function loadPdfJs() {
   if (window.pdfjsLib && window.pdfjsWorker) return window.pdfjsLib;
-  await loadScript(PDFJS.lib);
-  await loadScript(PDFJS.worker); // runs pdf.js on the page itself
+  await loadScript(PDFJS.lib);    // sets window.pdfjsLib
+  await loadScript(PDFJS.worker); // sets window.pdfjsWorker, so pdf.js runs on the page itself
+  if (!window.pdfjsLib || !window.pdfjsWorker) throw new Error('Couldn’t start the PDF reader. Try a photo of the receipt instead.');
   return window.pdfjsLib;
 }
 async function processFile(file) {
@@ -535,11 +537,12 @@ async function processFile(file) {
   if (!isPdf) {
     let src;
     try { src = await decodeImage(file); } catch (e) { throw new Error('That photo format can’t be opened here. Try a JPEG or PNG, or take a screenshot.'); }
+    if (src.width * src.height > 80e6) throw new Error('That image is too large to open (over 80 megapixels).');
     const out = await scaleToJpeg(src, 1600, 0.74);
     return { blob: out.blob, w: out.w, h: out.h, aiBlobs: [out.blob] };
   }
   const lib = await loadPdfJs();
-  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), enableXfa: false, isEvalSupported: false }).promise;
   const pages = Math.min(pdf.numPages, 3);
   const canvases = [];
   for (let p = 1; p <= pages; p++) {
@@ -830,8 +833,8 @@ function ReportCard({ r, onOpen }) {
 function Field({ id, label, hint, children }) {
   return html`<div class="field"><label for=${id}>${label}</label>${children}${hint && html`<span class="hint">${hint}</span>`}</div>`;
 }
-function TextInput({ id, value, onValue, placeholder, bad, autocomplete, type }) {
-  return html`<input id=${id} class=${'inp' + (bad ? ' bad' : '')} type=${type || 'text'} value=${value || ''} placeholder=${placeholder || ''} autocomplete=${autocomplete || 'off'} onInput=${e => onValue(e.target.value)} />`;
+function TextInput({ id, value, onValue, placeholder, bad, autocomplete, type, max }) {
+  return html`<input id=${id} class=${'inp' + (bad ? ' bad' : '')} type=${type || 'text'} value=${value || ''} maxlength=${max || 80} placeholder=${placeholder || ''} autocomplete=${autocomplete || 'off'} onInput=${e => onValue(e.target.value)} />`;
 }
 function MoneyInput({ id, value, onValue, bad, placeholder }) {
   const [txt, setTxt] = useState(value === null || value === undefined || value === '' ? '' : String(value));
@@ -1075,7 +1078,7 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
           <optgroup label="Only with your OK">${C.CATS.filter(x => !x.q).map(x => html`<option value=${x.key}>${x.label}</option>`)}</optgroup>
         </select>
       <//>
-      <${Field} id=${id('vendor')} label="Vendor"><${TextInput} id=${id('vendor')} value=${c.vendor} placeholder="e.g. Uber" onValue=${v => set({ vendor: v })} /><//>
+      <${Field} id=${id('vendor')} label="Vendor"><${TextInput} id=${id('vendor')} value=${c.vendor} max=${60} placeholder="e.g. Uber" onValue=${v => set({ vendor: v })} /><//>
       <${Field} id=${id('amt')} label="Amount on receipt">
         <div class="money-row">
           <${MoneyInput} id=${id('amt')} value=${c.amount} onValue=${v => set({ amount: v })} bad=${c.currency === 'CAD' && C.chargeCAD(c) === null} />

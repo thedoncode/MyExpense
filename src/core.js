@@ -8,7 +8,7 @@
   const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const DOW3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  function isISO(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(parse(s)); }
+  function isISO(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(parse(s)) && iso(parse(s)) === s; } // real calendar dates only
   function parse(s) { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); }
   function iso(ms) { const d = new Date(ms); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
   function addDays(s, n) { return iso(parse(s) + n * 86400000); }
@@ -808,6 +808,38 @@
     }
   }
 
+  /* ---------------- stored data: validate everything read back ---------------- */
+  // Card numbers are never kept in full: any run of 8+ digits becomes ••<last 4>.
+  function maskPayment(s) { return String(s || '').replace(/\d(?:[\s-]?\d){7,}/g, m => '••' + m.replace(/\D/g, '').slice(-4)); }
+  const ID = /^[A-Za-z0-9_-]{1,64}$/;
+  const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+  const num = (v) => (typeof v === 'number' && isFinite(v) && Math.abs(v) < 1e7 ? v : null);
+  function cleanCharge(c) {
+    if (!c || typeof c !== 'object' || typeof c.id !== 'string' || !ID.test(c.id)) return null;
+    const interrupted = c.ai === 'reading' || c.ai === 'processing';
+    return {
+      id: c.id, date: isISO(c.date) ? c.date : null, vendor: str(c.vendor, 60), category: CAT[c.category] ? c.category : '',
+      amount: num(c.amount), currency: typeof c.currency === 'string' && /^[A-Z]{3}$/.test(c.currency) ? c.currency : null, cad: num(c.cad),
+      approved: c.approved === true, imageId: typeof c.imageId === 'string' && ID.test(c.imageId) ? c.imageId : null,
+      ai: interrupted ? 'failed' : (c.ai === 'read' || c.ai === 'failed' ? c.ai : null), checked: c.checked === true,
+      payment: maskPayment(str(c.payment, 40)),
+      aiNote: interrupted ? 'Reading this receipt was interrupted. Fill in the details from the photo.' : str(c.aiNote, 200),
+    };
+  }
+  // Returns a well-formed copy of a stored report, or null if it isn't one
+  function cleanReport(r) {
+    if (!r || typeof r !== 'object' || (r.type !== 'perdiem' && r.type !== 'itemized') || typeof r.id !== 'string' || !ID.test(r.id)) return null;
+    const base = { id: r.id, type: r.type, name: str(r.name, 80), customer: str(r.customer, 80), createdAt: num(r.createdAt) || 0, updatedAt: num(r.updatedAt) || 0 };
+    if (r.type === 'perdiem') {
+      return { ...base, start: isISO(r.start) ? r.start : '', end: isISO(r.end) ? r.end : '',
+        partialMode: r.partialMode === 'none' || r.partialMode === 'some' ? r.partialMode : null,
+        partialDays: Array.isArray(r.partialDays) ? r.partialDays.filter(isISO).slice(0, 400) : [] };
+    }
+    return { ...base, manager: str(r.manager, 80), location: str(r.location, 80),
+      charges: (Array.isArray(r.charges) ? r.charges : []).slice(0, 500).map(cleanCharge).filter(Boolean) };
+  }
+  function cleanSettings(s) { return s && typeof s === 'object' ? { name: str(s.name, 80), ...(typeof s.manager === 'string' ? { manager: str(s.manager, 80) } : {}) } : {}; }
+
   /* ---------------- receipt reading (AI) ---------------- */
   const AI_PROMPT = (today) => [
     'You are reading a photo for an employee travel expense claim. The photo is either a single receipt, or a screenshot/photo of a bank or credit card statement.',
@@ -820,7 +852,7 @@
     '- cad: the amount in Canadian dollars ONLY if the document itself shows it (e.g. a Canadian card statement). Do not convert currencies yourself; otherwise null.',
     '- category: one of "taxi" (Uber, Lyft, taxi, rideshare), "rental" (car/vehicle rental), "airfare" (airline baggage / luggage fee), "fuel" (gas station fuel), "parking", "hotel", "meal", "other".',
     '- vendor: short merchant name, e.g. "Uber", "Enterprise", "Air Canada", "Shell".',
-    '- payment: the card or payment method if shown (e.g. "Visa 4412", "Amex"), else null.',
+    '- payment: the card type and ONLY the last 4 digits if shown (e.g. "Visa 4412", "Amex 1005"), never a full card number; else null.',
     'Reply with only JSON in this shape: {"kind":"receipt"|"statement"|"unreadable","transactions":[{"date":"YYYY-MM-DD"|null,"vendor":string|null,"category":string,"amount":number|null,"currency":string|null,"cad":number|null,"payment":string|null,"note":string|null}]}',
   ].join('\n');
 
@@ -847,7 +879,7 @@
         amount: amount,
         currency: cur || (cad !== null && amount === null ? 'CAD' : null),
         cad: cur === 'CAD' ? null : cad,
-        payment: typeof t.payment === 'string' ? t.payment.slice(0, 40) : '',
+        payment: typeof t.payment === 'string' ? maskPayment(t.payment).slice(0, 40) : '',
         note: typeof t.note === 'string' ? t.note.slice(0, 140) : '',
       });
     }
@@ -861,7 +893,7 @@
     perDiemProblems, perDiemWeeks, perDiemSummary, perDiemCells, perDiemXlsx,
     chargeCAD, chargeIssue, itemizedProblems, itemizedWeeks, itemizedSummary, itemizedCells, itemizedXlsx,
     fileBase, safeName, receiptList, formatCell, drawSheet, pdfForms, pdfReceipts,
-    AI_PROMPT, normalizeAi,
+    AI_PROMPT, normalizeAi, maskPayment, cleanReport, cleanCharge, cleanSettings,
     _internal: { parseSheet, serializeSheet, SST, applyCell },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

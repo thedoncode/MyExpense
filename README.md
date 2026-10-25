@@ -42,7 +42,7 @@ The full rules are in [`docs/`](docs): the per diem and itemized generator specs
 - **Excel output clones the template XML** instead of rebuilding it: the weekly sheet is copied once per week and only the data cells change, so fonts, fills, borders, merges, column widths, number formats, data validation and formulas stay exactly as in `templates/`. Formula results are written as cached values and the workbook is flagged to recalculate on open. Leftover template text (the sample employee, the author's folder path) is dropped from every generated file.
 - **PDF output** is drawn with jsPDF from `src/layouts.json`, a print-layout map (widths, heights, fills, borders, fonts, merges, number formats) extracted from the templates by `tools/extract_layout.py`.
 - `src/app.src.html`: the interface (Preact + htm). `build.js` inlines the core, the layout map and both templates into one file per environment in `dist/`, using the settings in `environments.json` (title, QA band).
-- Libraries load from jsDelivr at pinned versions with integrity hashes: htm 3.1.1 (Preact), JSZip 3.10.1, jsPDF 2.5.1, and pdf.js 3.11.174 (only when a PDF receipt is added).
+- Libraries load from jsDelivr at the exact versions in `package-lock.json`, each with an integrity hash: htm 3.1.1 (Preact), JSZip 3.10.2, jsPDF 4.2.1, and pdf.js 6.4.299 (only when a PDF receipt is added).
 
 ## Where it runs
 
@@ -57,15 +57,18 @@ Pages can't open a print dialog inside an Artifact, so the PDFs are the print pa
 ## Develop
 
 ```bash
-npm install
+npm ci               # exact locked versions
+npm run audit        # must report 0 vulnerabilities
 npm run build        # dist/prod/ and dist/qa/: the Artifact page for each environment
-npm test             # builds sample reports in test/out and verifies them
+npm test             # unit checks, library integrity, sample reports + spreadsheet checks
 npm run test:e2e     # browser run-through with several people at once (needs a Playwright Chromium)
 ```
 
 `npm run test:e2e` covers the privacy guarantees: it checks that people only ever see their own data, even when they bypass the app. The full list is in [docs/SECURITY.md](docs/SECURITY.md#how-its-tested).
 
-`npm test` builds fictional sample reports and checks three things:
+CI (`.github/workflows/ci.yml`) runs the audit, a check that `dist/` matches the source, `npm test` and `npm run test:e2e` on every push and pull request to `main` and `qa`, and weekly.
+
+`npm test` runs `test/unit.js` (the rules and safety guards) and `test/integrity.js` (every library hash matches the lockfile). It then builds fictional sample reports and checks three things:
 - Everything outside the data cells is exactly the template's.
 - Every cell matches the snapshots in `test/golden/`, recorded after the generator had reproduced Evertz's original filled-in workbooks cell for cell.
 - LibreOffice (`soffice`) recalculates every workbook with no formula errors and no cached value that disagrees.
@@ -80,7 +83,9 @@ It needs Python 3 with `openpyxl`. After an intended change to the output, re-re
 src/               core.js, app.src.html, layouts.json
 templates/         itemized-expense-claim.xlsx, perdiem-travel-expense.xlsx (the blank Evertz forms)
 tools/             extract_layout.py
-test/              generate.js, verify.py, e2e.js, golden/ (snapshots), fixtures/ (fictional receipts)
+test/              unit.js, integrity.js, generate.js, verify.py, e2e.js, golden/ (snapshots), fixtures/ (fictional receipts)
+.github/           CI workflow, Dependabot, CODEOWNERS
+SECURITY.md        how to report a vulnerability
 docs/              the per diem and itemized generator specs, ENVIRONMENTS.md, SECURITY.md
 environments.json  prod and QA settings
 dist/prod, dist/qa built app for each environment

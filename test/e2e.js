@@ -18,13 +18,12 @@ const OUT = path.join(__dirname, 'e2e-out');
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 const NM = path.join(ROOT, 'node_modules');
-const LIBS = {
-  'https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js': 'htm/preact/standalone.umd.js',
-  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js': 'jszip/dist/jszip.min.js',
-  'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js': 'jspdf/dist/jspdf.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js': 'pdfjs-dist/build/pdf.min.js',
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js': 'pdfjs-dist/build/pdf.worker.min.js',
-};
+// every library URL the app references, served from the locked node_modules copy
+const LIBS = {};
+for (const f of [path.join(ROOT, 'src', 'app.src.html')]) {
+  const html = fs.readFileSync(f, 'utf8');
+  for (const m of html.matchAll(/https:\/\/cdn\.jsdelivr\.net\/npm\/((?:@[^/]+\/)?[^@/]+)@[^/]+\/([^"'\s]+)/g)) LIBS[m[0]] = path.join(m[1], m[2]);
+}
 const envs = JSON.parse(fs.readFileSync(path.join(ROOT, 'environments.json'), 'utf8'));
 const pageFor = (env) => {
   const body = fs.readFileSync(path.join(ROOT, 'dist', env, envs[env].title.replace(/\s+/g, '-') + '.html'), 'utf8');
