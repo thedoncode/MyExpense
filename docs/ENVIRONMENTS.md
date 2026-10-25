@@ -16,16 +16,20 @@ Settings per environment live in [`environments.json`](../environments.json).
 
 ## Releasing a change
 
-1. **Work on `qa`.** Commit to the `qa` branch (or merge a feature branch into it).
-2. **Build and test.**
+`main` and `qa` are protected: changes reach them only through pull requests whose CI check ("Audit, build and test") has passed. Nobody, admins included, can push directly, force-push or delete them.
+
+1. **Branch from `qa`** and make the change on a feature branch.
+2. **Build and test locally.**
    ```bash
-   npm run build      # builds dist/prod and dist/qa
-   npm test           # template fidelity, snapshots and LibreOffice recalculation
+   npm ci
+   npm run build      # builds dist/prod and dist/qa (commit dist/ with the change)
+   npm test           # unit, integrity, template fidelity, snapshots, LibreOffice recalculation
    npm run test:e2e   # browser run-through with several people, including the QA build
    ```
-3. **Publish to QA.** Update the QA Artifact with `dist/qa/MyExpense-QA.html`, keeping its access rules. In a Claude session, ask Claude to republish it to the QA link above.
-4. **Check it in QA** on a phone: a per diem and an itemized report, a receipt photo, and every download.
-5. **Promote.** Merge `qa` into `main`, run `npm run build`, and update the production Artifact with `dist/prod/MyExpense.html`.
+3. **Open a pull request into `qa`.** CI runs the audit, checks `dist/` matches the source, and runs every test. Merge when it's green.
+4. **Publish to QA.** Update the QA Artifact with `dist/qa/MyExpense-QA.html`, keeping its access rules. In a Claude session, ask Claude to republish it to the QA link above.
+5. **Check it in QA** on a phone: a per diem and an itemized report, a receipt photo, and every download.
+6. **Promote.** Open a pull request from `qa` into `main`. When CI is green, merge it, then update the production Artifact with `dist/prod/MyExpense.html`.
 
 Never publish a QA build to the production link. The yellow band and the "MyExpense QA" title are there to make that mistake obvious.
 
