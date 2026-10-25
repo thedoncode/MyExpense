@@ -1,0 +1,5762 @@
+{
+ "Week Ending 04-Jul-26": {
+  "A2": [
+   "evertz",
+   "evertz"
+  ],
+  "B14": [
+   "Receipt #",
+   "Receipt #"
+  ],
+  "B31": [
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order.",
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order."
+  ],
+  "B33": [
+   "*Please report one currency per report.",
+   "*Please report one currency per report."
+  ],
+  "B37": [
+   "A/C",
+   "A/C"
+  ],
+  "B38": [
+   "A/C",
+   "A/C"
+  ],
+  "B39": [
+   "A/C",
+   "A/C"
+  ],
+  "B40": [
+   "A/C",
+   "A/C"
+  ],
+  "B41": [
+   "A/C",
+   "A/C"
+  ],
+  "C14": [
+   "Date",
+   "Date"
+  ],
+  "C15": [
+   "2026-06-28",
+   "2026-06-28"
+  ],
+  "C16": [
+   "2026-06-29",
+   "2026-06-29"
+  ],
+  "C17": [
+   "2026-06-30",
+   "2026-06-30"
+  ],
+  "C18": [
+   "2026-07-01",
+   "2026-07-01"
+  ],
+  "C19": [
+   "2026-07-02",
+   "2026-07-02"
+  ],
+  "C20": [
+   "2026-07-03",
+   "2026-07-03"
+  ],
+  "C21": [
+   "2026-07-04",
+   "2026-07-04"
+  ],
+  "C35": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "D14": [
+   "Description",
+   "Description"
+  ],
+  "D15": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D16": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D17": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D18": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D19": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D20": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D21": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "E14": [
+   "Currency*",
+   "Currency*"
+  ],
+  "E15": [
+   "USD",
+   "USD"
+  ],
+  "E16": [
+   "USD",
+   "USD"
+  ],
+  "E17": [
+   "USD",
+   "USD"
+  ],
+  "E18": [
+   "USD",
+   "USD"
+  ],
+  "E19": [
+   "USD",
+   "USD"
+  ],
+  "E20": [
+   "USD",
+   "USD"
+  ],
+  "E21": [
+   "USD",
+   "USD"
+  ],
+  "E37": [
+   "Amount",
+   "Amount"
+  ],
+  "E38": [
+   "Amount",
+   "Amount"
+  ],
+  "E39": [
+   "Amount",
+   "Amount"
+  ],
+  "E40": [
+   "Amount",
+   "Amount"
+  ],
+  "E41": [
+   "Amount",
+   "Amount"
+  ],
+  "F14": [
+   "Amount",
+   "Amount"
+  ],
+  "F2": [
+   "TRAVEL EXPENSE REPORT",
+   "TRAVEL EXPENSE REPORT"
+  ],
+  "G14": [
+   "Airfare / Train",
+   "Airfare / Train"
+  ],
+  "G15": [
+   "=IF($D15=G$14,$F15,\"\")",
+   null
+  ],
+  "G16": [
+   "=IF($D16=G$14,$F16,\"\")",
+   null
+  ],
+  "G17": [
+   "=IF($D17=G$14,$F17,\"\")",
+   null
+  ],
+  "G18": [
+   "=IF($D18=G$14,$F18,\"\")",
+   null
+  ],
+  "G19": [
+   "=IF($D19=G$14,$F19,\"\")",
+   null
+  ],
+  "G20": [
+   "=IF($D20=G$14,$F20,\"\")",
+   null
+  ],
+  "G21": [
+   "=IF($D21=G$14,$F21,\"\")",
+   null
+  ],
+  "G22": [
+   "=IF($D22=G$14,$F22,\"\")",
+   null
+  ],
+  "G23": [
+   "=IF($D23=G$14,$F23,\"\")",
+   null
+  ],
+  "G24": [
+   "=IF($D24=G$14,$F24,\"\")",
+   null
+  ],
+  "G25": [
+   "=IF($D25=G$14,$F25,\"\")",
+   null
+  ],
+  "G26": [
+   "=IF($D26=G$14,$F26,\"\")",
+   null
+  ],
+  "G27": [
+   "=IF($D27=G$14,$F27,\"\")",
+   null
+  ],
+  "G28": [
+   "=IF($D28=G$14,$F28,\"\")",
+   null
+  ],
+  "G29": [
+   "=IF($D29=G$14,$F29,\"\")",
+   null
+  ],
+  "G30": [
+   "=SUM(G15:G29)",
+   0
+  ],
+  "H14": [
+   "Breakfast",
+   "Breakfast"
+  ],
+  "H15": [
+   "=IF($D15=H$14,$F15,\"\")",
+   null
+  ],
+  "H16": [
+   "=IF($D16=H$14,$F16,\"\")",
+   null
+  ],
+  "H17": [
+   "=IF($D17=H$14,$F17,\"\")",
+   null
+  ],
+  "H18": [
+   "=IF($D18=H$14,$F18,\"\")",
+   null
+  ],
+  "H19": [
+   "=IF($D19=H$14,$F19,\"\")",
+   null
+  ],
+  "H20": [
+   "=IF($D20=H$14,$F20,\"\")",
+   null
+  ],
+  "H21": [
+   "=IF($D21=H$14,$F21,\"\")",
+   null
+  ],
+  "H22": [
+   "=IF($D22=H$14,$F22,\"\")",
+   null
+  ],
+  "H23": [
+   "=IF($D23=H$14,$F23,\"\")",
+   null
+  ],
+  "H24": [
+   "=IF($D24=H$14,$F24,\"\")",
+   null
+  ],
+  "H25": [
+   "=IF($D25=H$14,$F25,\"\")",
+   null
+  ],
+  "H26": [
+   "=IF($D26=H$14,$F26,\"\")",
+   null
+  ],
+  "H27": [
+   "=IF($D27=H$14,$F27,\"\")",
+   null
+  ],
+  "H28": [
+   "=IF($D28=H$14,$F28,\"\")",
+   null
+  ],
+  "H29": [
+   "=IF($D29=H$14,$F29,\"\")",
+   null
+  ],
+  "H30": [
+   "=SUM(H15:H29)",
+   0
+  ],
+  "H37": [
+   "P.J.",
+   "P.J."
+  ],
+  "H39": [
+   "Cheque #",
+   "Cheque #"
+  ],
+  "H41": [
+   "Date Paid",
+   "Date Paid"
+  ],
+  "I14": [
+   "Lunch",
+   "Lunch"
+  ],
+  "I15": [
+   "=IF($D15=I$14,$F15,\"\")",
+   null
+  ],
+  "I16": [
+   "=IF($D16=I$14,$F16,\"\")",
+   null
+  ],
+  "I17": [
+   "=IF($D17=I$14,$F17,\"\")",
+   null
+  ],
+  "I18": [
+   "=IF($D18=I$14,$F18,\"\")",
+   null
+  ],
+  "I19": [
+   "=IF($D19=I$14,$F19,\"\")",
+   null
+  ],
+  "I20": [
+   "=IF($D20=I$14,$F20,\"\")",
+   null
+  ],
+  "I21": [
+   "=IF($D21=I$14,$F21,\"\")",
+   null
+  ],
+  "I22": [
+   "=IF($D22=I$14,$F22,\"\")",
+   null
+  ],
+  "I23": [
+   "=IF($D23=I$14,$F23,\"\")",
+   null
+  ],
+  "I24": [
+   "=IF($D24=I$14,$F24,\"\")",
+   null
+  ],
+  "I25": [
+   "=IF($D25=I$14,$F25,\"\")",
+   null
+  ],
+  "I26": [
+   "=IF($D26=I$14,$F26,\"\")",
+   null
+  ],
+  "I27": [
+   "=IF($D27=I$14,$F27,\"\")",
+   null
+  ],
+  "I28": [
+   "=IF($D28=I$14,$F28,\"\")",
+   null
+  ],
+  "I29": [
+   "=IF($D29=I$14,$F29,\"\")",
+   null
+  ],
+  "I30": [
+   "=SUM(I15:I29)",
+   0
+  ],
+  "J14": [
+   "Dinner",
+   "Dinner"
+  ],
+  "J15": [
+   "=IF($D15=J$14,$F15,\"\")",
+   null
+  ],
+  "J16": [
+   "=IF($D16=J$14,$F16,\"\")",
+   null
+  ],
+  "J17": [
+   "=IF($D17=J$14,$F17,\"\")",
+   null
+  ],
+  "J18": [
+   "=IF($D18=J$14,$F18,\"\")",
+   null
+  ],
+  "J19": [
+   "=IF($D19=J$14,$F19,\"\")",
+   null
+  ],
+  "J20": [
+   "=IF($D20=J$14,$F20,\"\")",
+   null
+  ],
+  "J21": [
+   "=IF($D21=J$14,$F21,\"\")",
+   null
+  ],
+  "J22": [
+   "=IF($D22=J$14,$F22,\"\")",
+   null
+  ],
+  "J23": [
+   "=IF($D23=J$14,$F23,\"\")",
+   null
+  ],
+  "J24": [
+   "=IF($D24=J$14,$F24,\"\")",
+   null
+  ],
+  "J25": [
+   "=IF($D25=J$14,$F25,\"\")",
+   null
+  ],
+  "J26": [
+   "=IF($D26=J$14,$F26,\"\")",
+   null
+  ],
+  "J27": [
+   "=IF($D27=J$14,$F27,\"\")",
+   null
+  ],
+  "J28": [
+   "=IF($D28=J$14,$F28,\"\")",
+   null
+  ],
+  "J29": [
+   "=IF($D29=J$14,$F29,\"\")",
+   null
+  ],
+  "J30": [
+   "=SUM(J15:J29)",
+   0
+  ],
+  "K14": [
+   "Late Meal / Overtime",
+   "Late Meal / Overtime"
+  ],
+  "K15": [
+   "=IF($D15=K$14,$F15,\"\")",
+   null
+  ],
+  "K16": [
+   "=IF($D16=K$14,$F16,\"\")",
+   null
+  ],
+  "K17": [
+   "=IF($D17=K$14,$F17,\"\")",
+   null
+  ],
+  "K18": [
+   "=IF($D18=K$14,$F18,\"\")",
+   null
+  ],
+  "K19": [
+   "=IF($D19=K$14,$F19,\"\")",
+   null
+  ],
+  "K20": [
+   "=IF($D20=K$14,$F20,\"\")",
+   null
+  ],
+  "K21": [
+   "=IF($D21=K$14,$F21,\"\")",
+   null
+  ],
+  "K22": [
+   "=IF($D22=K$14,$F22,\"\")",
+   null
+  ],
+  "K23": [
+   "=IF($D23=K$14,$F23,\"\")",
+   null
+  ],
+  "K24": [
+   "=IF($D24=K$14,$F24,\"\")",
+   null
+  ],
+  "K25": [
+   "=IF($D25=K$14,$F25,\"\")",
+   null
+  ],
+  "K26": [
+   "=IF($D26=K$14,$F26,\"\")",
+   null
+  ],
+  "K27": [
+   "=IF($D27=K$14,$F27,\"\")",
+   null
+  ],
+  "K28": [
+   "=IF($D28=K$14,$F28,\"\")",
+   null
+  ],
+  "K29": [
+   "=IF($D29=K$14,$F29,\"\")",
+   null
+  ],
+  "K30": [
+   "=SUM(K15:K29)",
+   0
+  ],
+  "L10": [
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED",
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED"
+  ],
+  "L11": [
+   "SINCE LAST EXPENSE)",
+   "SINCE LAST EXPENSE)"
+  ],
+  "L14": [
+   "Per Diem",
+   "Per Diem"
+  ],
+  "L15": [
+   100,
+   100
+  ],
+  "L16": [
+   100,
+   100
+  ],
+  "L17": [
+   100,
+   100
+  ],
+  "L18": [
+   100,
+   100
+  ],
+  "L19": [
+   100,
+   100
+  ],
+  "L20": [
+   100,
+   100
+  ],
+  "L21": [
+   100,
+   100
+  ],
+  "L22": [
+   "=IF(OR($D22='Expense Descriptions'!$A$2,$D22='Expense Descriptions'!$A$3),$F22,\"\")",
+   null
+  ],
+  "L23": [
+   "=IF(OR($D23='Expense Descriptions'!$A$2,$D23='Expense Descriptions'!$A$3),$F23,\"\")",
+   null
+  ],
+  "L24": [
+   "=IF(OR($D24='Expense Descriptions'!$A$2,$D24='Expense Descriptions'!$A$3),$F24,\"\")",
+   null
+  ],
+  "L25": [
+   "=IF(OR($D25='Expense Descriptions'!$A$2,$D25='Expense Descriptions'!$A$3),$F25,\"\")",
+   null
+  ],
+  "L26": [
+   "=IF(OR($D26='Expense Descriptions'!$A$2,$D26='Expense Descriptions'!$A$3),$F26,\"\")",
+   null
+  ],
+  "L27": [
+   "=IF(OR($D27='Expense Descriptions'!$A$2,$D27='Expense Descriptions'!$A$3),$F27,\"\")",
+   null
+  ],
+  "L28": [
+   "=IF(OR($D28='Expense Descriptions'!$A$2,$D28='Expense Descriptions'!$A$3),$F28,\"\")",
+   null
+  ],
+  "L29": [
+   "=IF(OR($D29='Expense Descriptions'!$A$2,$D29='Expense Descriptions'!$A$3),$F29,\"\")",
+   null
+  ],
+  "L30": [
+   "=SUM(L15:L29)",
+   700
+  ],
+  "L4": [
+   "WEEK ENDING",
+   "WEEK ENDING"
+  ],
+  "L5": [
+   "NAME",
+   "NAME"
+  ],
+  "L6": [
+   "DEPARTMENT",
+   "DEPARTMENT"
+  ],
+  "L7": [
+   "CUSTOMER TRIP",
+   "CUSTOMER TRIP"
+  ],
+  "L8": [
+   "TRIP DESTINATION",
+   "TRIP DESTINATION"
+  ],
+  "M14": [
+   "Incidentals",
+   "Incidentals"
+  ],
+  "M15": [
+   "=IF($D15=M$14,$F15,\"\")",
+   null
+  ],
+  "M16": [
+   "=IF($D16=M$14,$F16,\"\")",
+   null
+  ],
+  "M17": [
+   "=IF($D17=M$14,$F17,\"\")",
+   null
+  ],
+  "M18": [
+   "=IF($D18=M$14,$F18,\"\")",
+   null
+  ],
+  "M19": [
+   "=IF($D19=M$14,$F19,\"\")",
+   null
+  ],
+  "M20": [
+   "=IF($D20=M$14,$F20,\"\")",
+   null
+  ],
+  "M21": [
+   "=IF($D21=M$14,$F21,\"\")",
+   null
+  ],
+  "M22": [
+   "=IF($D22=M$14,$F22,\"\")",
+   null
+  ],
+  "M23": [
+   "=IF($D23=M$14,$F23,\"\")",
+   null
+  ],
+  "M24": [
+   "=IF($D24=M$14,$F24,\"\")",
+   null
+  ],
+  "M25": [
+   "=IF($D25=M$14,$F25,\"\")",
+   null
+  ],
+  "M26": [
+   "=IF($D26=M$14,$F26,\"\")",
+   null
+  ],
+  "M27": [
+   "=IF($D27=M$14,$F27,\"\")",
+   null
+  ],
+  "M28": [
+   "=IF($D28=M$14,$F28,\"\")",
+   null
+  ],
+  "M29": [
+   "=IF($D29=M$14,$F29,\"\")",
+   null
+  ],
+  "M30": [
+   "=SUM(M15:M29)",
+   0
+  ],
+  "M35": [
+   "Per Diem Calculator\n(based on above noted Trip Destination)",
+   "Per Diem Calculator\n(based on above noted Trip Destination)"
+  ],
+  "M38": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "M39": [
+   "Per Diam - Partial Day",
+   "Per Diam - Partial Day"
+  ],
+  "N14": [
+   "Hotel",
+   "Hotel"
+  ],
+  "N15": [
+   "=IF($D15=N$14,$F15,\"\")",
+   null
+  ],
+  "N16": [
+   "=IF($D16=N$14,$F16,\"\")",
+   null
+  ],
+  "N17": [
+   "=IF($D17=N$14,$F17,\"\")",
+   null
+  ],
+  "N18": [
+   "=IF($D18=N$14,$F18,\"\")",
+   null
+  ],
+  "N19": [
+   "=IF($D19=N$14,$F19,\"\")",
+   null
+  ],
+  "N20": [
+   "=IF($D20=N$14,$F20,\"\")",
+   null
+  ],
+  "N21": [
+   "=IF($D21=N$14,$F21,\"\")",
+   null
+  ],
+  "N22": [
+   "=IF($D22=N$14,$F22,\"\")",
+   null
+  ],
+  "N23": [
+   "=IF($D23=N$14,$F23,\"\")",
+   null
+  ],
+  "N24": [
+   "=IF($D24=N$14,$F24,\"\")",
+   null
+  ],
+  "N25": [
+   "=IF($D25=N$14,$F25,\"\")",
+   null
+  ],
+  "N26": [
+   "=IF($D26=N$14,$F26,\"\")",
+   null
+  ],
+  "N27": [
+   "=IF($D27=N$14,$F27,\"\")",
+   null
+  ],
+  "N28": [
+   "=IF($D28=N$14,$F28,\"\")",
+   null
+  ],
+  "N29": [
+   "=IF($D29=N$14,$F29,\"\")",
+   null
+  ],
+  "N30": [
+   "=SUM(N15:N29)",
+   0
+  ],
+  "N4": [
+   "2026-07-04",
+   "2026-07-04"
+  ],
+  "N5": [
+   "Jamie Chen",
+   "Jamie Chen"
+  ],
+  "N6": [
+   "Service",
+   "Service"
+  ],
+  "N7": [
+   "Northwind Studios",
+   "Northwind Studios"
+  ],
+  "N8": [
+   "United States",
+   "United States"
+  ],
+  "O14": [
+   "Auto Rental",
+   "Auto Rental"
+  ],
+  "O15": [
+   "=IF($D15=O$14,$F15,\"\")",
+   null
+  ],
+  "O16": [
+   "=IF($D16=O$14,$F16,\"\")",
+   null
+  ],
+  "O17": [
+   "=IF($D17=O$14,$F17,\"\")",
+   null
+  ],
+  "O18": [
+   "=IF($D18=O$14,$F18,\"\")",
+   null
+  ],
+  "O19": [
+   "=IF($D19=O$14,$F19,\"\")",
+   null
+  ],
+  "O20": [
+   "=IF($D20=O$14,$F20,\"\")",
+   null
+  ],
+  "O21": [
+   "=IF($D21=O$14,$F21,\"\")",
+   null
+  ],
+  "O22": [
+   "=IF($D22=O$14,$F22,\"\")",
+   null
+  ],
+  "O23": [
+   "=IF($D23=O$14,$F23,\"\")",
+   null
+  ],
+  "O24": [
+   "=IF($D24=O$14,$F24,\"\")",
+   null
+  ],
+  "O25": [
+   "=IF($D25=O$14,$F25,\"\")",
+   null
+  ],
+  "O26": [
+   "=IF($D26=O$14,$F26,\"\")",
+   null
+  ],
+  "O27": [
+   "=IF($D27=O$14,$F27,\"\")",
+   null
+  ],
+  "O28": [
+   "=IF($D28=O$14,$F28,\"\")",
+   null
+  ],
+  "O29": [
+   "=IF($D29=O$14,$F29,\"\")",
+   null
+  ],
+  "O30": [
+   "=SUM(O15:O29)",
+   0
+  ],
+  "O37": [
+   "USD$",
+   "USD$"
+  ],
+  "O38": [
+   "=IFERROR(VLOOKUP(N8,'Per Diem (USD$)'!B5:G11,6,FALSE),100)",
+   100
+  ],
+  "O39": [
+   "=ROUND(O38*0.5,1)",
+   50
+  ],
+  "P14": [
+   "Parking",
+   "Parking"
+  ],
+  "P15": [
+   "=IF($D15=P$14,$F15,\"\")",
+   null
+  ],
+  "P16": [
+   "=IF($D16=P$14,$F16,\"\")",
+   null
+  ],
+  "P17": [
+   "=IF($D17=P$14,$F17,\"\")",
+   null
+  ],
+  "P18": [
+   "=IF($D18=P$14,$F18,\"\")",
+   null
+  ],
+  "P19": [
+   "=IF($D19=P$14,$F19,\"\")",
+   null
+  ],
+  "P20": [
+   "=IF($D20=P$14,$F20,\"\")",
+   null
+  ],
+  "P21": [
+   "=IF($D21=P$14,$F21,\"\")",
+   null
+  ],
+  "P22": [
+   "=IF($D22=P$14,$F22,\"\")",
+   null
+  ],
+  "P23": [
+   "=IF($D23=P$14,$F23,\"\")",
+   null
+  ],
+  "P24": [
+   "=IF($D24=P$14,$F24,\"\")",
+   null
+  ],
+  "P25": [
+   "=IF($D25=P$14,$F25,\"\")",
+   null
+  ],
+  "P26": [
+   "=IF($D26=P$14,$F26,\"\")",
+   null
+  ],
+  "P27": [
+   "=IF($D27=P$14,$F27,\"\")",
+   null
+  ],
+  "P28": [
+   "=IF($D28=P$14,$F28,\"\")",
+   null
+  ],
+  "P29": [
+   "=IF($D29=P$14,$F29,\"\")",
+   null
+  ],
+  "P30": [
+   "=SUM(P15:P29)",
+   0
+  ],
+  "P37": [
+   "Local Currency",
+   "Local Currency"
+  ],
+  "P38": [
+   "=VLOOKUP(N8,'Per Diem (Mixed Currency)'!B5:H14,7,FALSE)",
+   100
+  ],
+  "P39": [
+   "=ROUND(P38*0.5,1)",
+   50
+  ],
+  "Q14": [
+   "Taxi",
+   "Taxi"
+  ],
+  "Q15": [
+   "=IF($D15=Q$14,$F15,\"\")",
+   null
+  ],
+  "Q16": [
+   "=IF($D16=Q$14,$F16,\"\")",
+   null
+  ],
+  "Q17": [
+   "=IF($D17=Q$14,$F17,\"\")",
+   null
+  ],
+  "Q18": [
+   "=IF($D18=Q$14,$F18,\"\")",
+   null
+  ],
+  "Q19": [
+   "=IF($D19=Q$14,$F19,\"\")",
+   null
+  ],
+  "Q20": [
+   "=IF($D20=Q$14,$F20,\"\")",
+   null
+  ],
+  "Q21": [
+   "=IF($D21=Q$14,$F21,\"\")",
+   null
+  ],
+  "Q22": [
+   "=IF($D22=Q$14,$F22,\"\")",
+   null
+  ],
+  "Q23": [
+   "=IF($D23=Q$14,$F23,\"\")",
+   null
+  ],
+  "Q24": [
+   "=IF($D24=Q$14,$F24,\"\")",
+   null
+  ],
+  "Q25": [
+   "=IF($D25=Q$14,$F25,\"\")",
+   null
+  ],
+  "Q26": [
+   "=IF($D26=Q$14,$F26,\"\")",
+   null
+  ],
+  "Q27": [
+   "=IF($D27=Q$14,$F27,\"\")",
+   null
+  ],
+  "Q28": [
+   "=IF($D28=Q$14,$F28,\"\")",
+   null
+  ],
+  "Q29": [
+   "=IF($D29=Q$14,$F29,\"\")",
+   null
+  ],
+  "Q30": [
+   "=SUM(Q15:Q29)",
+   0
+  ],
+  "R14": [
+   "Fuel",
+   "Fuel"
+  ],
+  "R15": [
+   "=IF($D15=R$14,$F15,\"\")",
+   null
+  ],
+  "R16": [
+   "=IF($D16=R$14,$F16,\"\")",
+   null
+  ],
+  "R17": [
+   "=IF($D17=R$14,$F17,\"\")",
+   null
+  ],
+  "R18": [
+   "=IF($D18=R$14,$F18,\"\")",
+   null
+  ],
+  "R19": [
+   "=IF($D19=R$14,$F19,\"\")",
+   null
+  ],
+  "R20": [
+   "=IF($D20=R$14,$F20,\"\")",
+   null
+  ],
+  "R21": [
+   "=IF($D21=R$14,$F21,\"\")",
+   null
+  ],
+  "R22": [
+   "=IF($D22=R$14,$F22,\"\")",
+   null
+  ],
+  "R23": [
+   "=IF($D23=R$14,$F23,\"\")",
+   null
+  ],
+  "R24": [
+   "=IF($D24=R$14,$F24,\"\")",
+   null
+  ],
+  "R25": [
+   "=IF($D25=R$14,$F25,\"\")",
+   null
+  ],
+  "R26": [
+   "=IF($D26=R$14,$F26,\"\")",
+   null
+  ],
+  "R27": [
+   "=IF($D27=R$14,$F27,\"\")",
+   null
+  ],
+  "R28": [
+   "=IF($D28=R$14,$F28,\"\")",
+   null
+  ],
+  "R29": [
+   "=IF($D29=R$14,$F29,\"\")",
+   null
+  ],
+  "S14": [
+   "Mileage (@.55/M, .50/KM)",
+   "Mileage (@.55/M, .50/KM)"
+  ],
+  "S15": [
+   "=IF($D15=S$14,$F15,\"\")",
+   null
+  ],
+  "S16": [
+   "=IF($D16=S$14,$F16,\"\")",
+   null
+  ],
+  "S17": [
+   "=IF($D17=S$14,$F17,\"\")",
+   null
+  ],
+  "S18": [
+   "=IF($D18=S$14,$F18,\"\")",
+   null
+  ],
+  "S19": [
+   "=IF($D19=S$14,$F19,\"\")",
+   null
+  ],
+  "S20": [
+   "=IF($D20=S$14,$F20,\"\")",
+   null
+  ],
+  "S21": [
+   "=IF($D21=S$14,$F21,\"\")",
+   null
+  ],
+  "S22": [
+   "=IF($D22=S$14,$F22,\"\")",
+   null
+  ],
+  "S23": [
+   "=IF($D23=S$14,$F23,\"\")",
+   null
+  ],
+  "S24": [
+   "=IF($D24=S$14,$F24,\"\")",
+   null
+  ],
+  "S25": [
+   "=IF($D25=S$14,$F25,\"\")",
+   null
+  ],
+  "S26": [
+   "=IF($D26=S$14,$F26,\"\")",
+   null
+  ],
+  "S27": [
+   "=IF($D27=S$14,$F27,\"\")",
+   null
+  ],
+  "S28": [
+   "=IF($D28=S$14,$F28,\"\")",
+   null
+  ],
+  "S29": [
+   "=IF($D29=S$14,$F29,\"\")",
+   null
+  ],
+  "S30": [
+   "=SUM(S15:S29)",
+   0
+  ],
+  "S31": [
+   "Subtotal",
+   "Subtotal"
+  ],
+  "S32": [
+   "Advances",
+   "Advances"
+  ],
+  "S33": [
+   "Total",
+   "Total"
+  ],
+  "S37": [
+   "Signature",
+   "Signature"
+  ],
+  "S39": [
+   "Approved",
+   "Approved"
+  ],
+  "S41": [
+   "Date",
+   "Date"
+  ],
+  "T14": [
+   "Other",
+   "Other"
+  ],
+  "T15": [
+   "=IF($D15=T$14,$F15,\"\")",
+   null
+  ],
+  "T16": [
+   "=IF($D16=T$14,$F16,\"\")",
+   null
+  ],
+  "T17": [
+   "=IF($D17=T$14,$F17,\"\")",
+   null
+  ],
+  "T18": [
+   "=IF($D18=T$14,$F18,\"\")",
+   null
+  ],
+  "T19": [
+   "=IF($D19=T$14,$F19,\"\")",
+   null
+  ],
+  "T20": [
+   "=IF($D20=T$14,$F20,\"\")",
+   null
+  ],
+  "T21": [
+   "=IF($D21=T$14,$F21,\"\")",
+   null
+  ],
+  "T22": [
+   "=IF($D22=T$14,$F22,\"\")",
+   null
+  ],
+  "T23": [
+   "=IF($D23=T$14,$F23,\"\")",
+   null
+  ],
+  "T24": [
+   "=IF($D24=T$14,$F24,\"\")",
+   null
+  ],
+  "T25": [
+   "=IF($D25=T$14,$F25,\"\")",
+   null
+  ],
+  "T26": [
+   "=IF($D26=T$14,$F26,\"\")",
+   null
+  ],
+  "T27": [
+   "=IF($D27=T$14,$F27,\"\")",
+   null
+  ],
+  "T28": [
+   "=IF($D28=T$14,$F28,\"\")",
+   null
+  ],
+  "T29": [
+   "=IF($D29=T$14,$F29,\"\")",
+   null
+  ],
+  "T30": [
+   "=SUM(T15:T29)",
+   0
+  ],
+  "U14": [
+   "Total",
+   "Total"
+  ],
+  "U15": [
+   "=SUM(G15:T15)",
+   100
+  ],
+  "U16": [
+   "=SUM(G16:T16)",
+   100
+  ],
+  "U17": [
+   "=SUM(G17:T17)",
+   100
+  ],
+  "U18": [
+   "=SUM(G18:T18)",
+   100
+  ],
+  "U19": [
+   "=SUM(G19:T19)",
+   100
+  ],
+  "U20": [
+   "=SUM(G20:T20)",
+   100
+  ],
+  "U21": [
+   "=SUM(G21:T21)",
+   100
+  ],
+  "U22": [
+   "=SUM(G22:T22)",
+   0
+  ],
+  "U23": [
+   "=SUM(G23:T23)",
+   0
+  ],
+  "U24": [
+   "=SUM(G24:T24)",
+   0
+  ],
+  "U25": [
+   "=SUM(G25:T25)",
+   0
+  ],
+  "U26": [
+   "=SUM(G26:T26)",
+   0
+  ],
+  "U27": [
+   "=SUM(G27:T27)",
+   0
+  ],
+  "U28": [
+   "=SUM(G28:T28)",
+   0
+  ],
+  "U29": [
+   "=SUM(G29:T29)",
+   0
+  ],
+  "U31": [
+   "=SUM(U15:U29)",
+   700
+  ],
+  "U33": [
+   "=(U31-U32)",
+   700
+  ],
+  "V13": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "V14": [
+   "HST",
+   "HST"
+  ],
+  "V15": [
+   0,
+   0
+  ],
+  "V16": [
+   0,
+   0
+  ],
+  "V17": [
+   0,
+   0
+  ],
+  "V18": [
+   0,
+   0
+  ],
+  "V19": [
+   0,
+   0
+  ],
+  "V20": [
+   0,
+   0
+  ],
+  "V21": [
+   0,
+   0
+  ],
+  "V22": [
+   0,
+   0
+  ],
+  "V23": [
+   0,
+   0
+  ],
+  "V24": [
+   0,
+   0
+  ],
+  "V25": [
+   0,
+   0
+  ],
+  "V26": [
+   0,
+   0
+  ],
+  "V27": [
+   0,
+   0
+  ],
+  "V28": [
+   0,
+   0
+  ],
+  "V29": [
+   0,
+   0
+  ],
+  "V31": [
+   "=SUM(V15:V29)",
+   0
+  ],
+  "W14": [
+   "Net of HST",
+   "Net of HST"
+  ],
+  "W15": [
+   "=+U15-V15",
+   100
+  ],
+  "W16": [
+   "=+U16-V16",
+   100
+  ],
+  "W17": [
+   "=+U17-V17",
+   100
+  ],
+  "W18": [
+   "=+U18-V18",
+   100
+  ],
+  "W19": [
+   "=+U19-V19",
+   100
+  ],
+  "W20": [
+   "=+U20-V20",
+   100
+  ],
+  "W21": [
+   "=+U21-V21",
+   100
+  ],
+  "W22": [
+   "=+U22-V22",
+   0
+  ],
+  "W23": [
+   "=+U23-V23",
+   0
+  ],
+  "W24": [
+   "=+U24-V24",
+   0
+  ],
+  "W25": [
+   "=+U25-V25",
+   0
+  ],
+  "W26": [
+   "=+U26-V26",
+   0
+  ],
+  "W27": [
+   "=+U27-V27",
+   0
+  ],
+  "W28": [
+   "=+U28-V28",
+   0
+  ],
+  "W29": [
+   "=+U29-V29",
+   0
+  ],
+  "W31": [
+   "=SUM(W15:W29)",
+   700
+  ]
+ },
+ "Week Ending 11-Jul-26": {
+  "A2": [
+   "evertz",
+   "evertz"
+  ],
+  "B14": [
+   "Receipt #",
+   "Receipt #"
+  ],
+  "B31": [
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order.",
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order."
+  ],
+  "B33": [
+   "*Please report one currency per report.",
+   "*Please report one currency per report."
+  ],
+  "B37": [
+   "A/C",
+   "A/C"
+  ],
+  "B38": [
+   "A/C",
+   "A/C"
+  ],
+  "B39": [
+   "A/C",
+   "A/C"
+  ],
+  "B40": [
+   "A/C",
+   "A/C"
+  ],
+  "B41": [
+   "A/C",
+   "A/C"
+  ],
+  "C14": [
+   "Date",
+   "Date"
+  ],
+  "C15": [
+   "2026-07-05",
+   "2026-07-05"
+  ],
+  "C16": [
+   "2026-07-06",
+   "2026-07-06"
+  ],
+  "C17": [
+   "2026-07-07",
+   "2026-07-07"
+  ],
+  "C18": [
+   "2026-07-08",
+   "2026-07-08"
+  ],
+  "C19": [
+   "2026-07-09",
+   "2026-07-09"
+  ],
+  "C20": [
+   "2026-07-10",
+   "2026-07-10"
+  ],
+  "C35": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "D14": [
+   "Description",
+   "Description"
+  ],
+  "D15": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D16": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D17": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D18": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D19": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D20": [
+   "Per Diam - Partial Day",
+   "Per Diam - Partial Day"
+  ],
+  "E14": [
+   "Currency*",
+   "Currency*"
+  ],
+  "E15": [
+   "USD",
+   "USD"
+  ],
+  "E16": [
+   "USD",
+   "USD"
+  ],
+  "E17": [
+   "USD",
+   "USD"
+  ],
+  "E18": [
+   "USD",
+   "USD"
+  ],
+  "E19": [
+   "USD",
+   "USD"
+  ],
+  "E20": [
+   "USD",
+   "USD"
+  ],
+  "E37": [
+   "Amount",
+   "Amount"
+  ],
+  "E38": [
+   "Amount",
+   "Amount"
+  ],
+  "E39": [
+   "Amount",
+   "Amount"
+  ],
+  "E40": [
+   "Amount",
+   "Amount"
+  ],
+  "E41": [
+   "Amount",
+   "Amount"
+  ],
+  "F14": [
+   "Amount",
+   "Amount"
+  ],
+  "F2": [
+   "TRAVEL EXPENSE REPORT",
+   "TRAVEL EXPENSE REPORT"
+  ],
+  "G14": [
+   "Airfare / Train",
+   "Airfare / Train"
+  ],
+  "G15": [
+   "=IF($D15=G$14,$F15,\"\")",
+   null
+  ],
+  "G16": [
+   "=IF($D16=G$14,$F16,\"\")",
+   null
+  ],
+  "G17": [
+   "=IF($D17=G$14,$F17,\"\")",
+   null
+  ],
+  "G18": [
+   "=IF($D18=G$14,$F18,\"\")",
+   null
+  ],
+  "G19": [
+   "=IF($D19=G$14,$F19,\"\")",
+   null
+  ],
+  "G20": [
+   "=IF($D20=G$14,$F20,\"\")",
+   null
+  ],
+  "G21": [
+   "=IF($D21=G$14,$F21,\"\")",
+   null
+  ],
+  "G22": [
+   "=IF($D22=G$14,$F22,\"\")",
+   null
+  ],
+  "G23": [
+   "=IF($D23=G$14,$F23,\"\")",
+   null
+  ],
+  "G24": [
+   "=IF($D24=G$14,$F24,\"\")",
+   null
+  ],
+  "G25": [
+   "=IF($D25=G$14,$F25,\"\")",
+   null
+  ],
+  "G26": [
+   "=IF($D26=G$14,$F26,\"\")",
+   null
+  ],
+  "G27": [
+   "=IF($D27=G$14,$F27,\"\")",
+   null
+  ],
+  "G28": [
+   "=IF($D28=G$14,$F28,\"\")",
+   null
+  ],
+  "G29": [
+   "=IF($D29=G$14,$F29,\"\")",
+   null
+  ],
+  "G30": [
+   "=SUM(G15:G29)",
+   0
+  ],
+  "H14": [
+   "Breakfast",
+   "Breakfast"
+  ],
+  "H15": [
+   "=IF($D15=H$14,$F15,\"\")",
+   null
+  ],
+  "H16": [
+   "=IF($D16=H$14,$F16,\"\")",
+   null
+  ],
+  "H17": [
+   "=IF($D17=H$14,$F17,\"\")",
+   null
+  ],
+  "H18": [
+   "=IF($D18=H$14,$F18,\"\")",
+   null
+  ],
+  "H19": [
+   "=IF($D19=H$14,$F19,\"\")",
+   null
+  ],
+  "H20": [
+   "=IF($D20=H$14,$F20,\"\")",
+   null
+  ],
+  "H21": [
+   "=IF($D21=H$14,$F21,\"\")",
+   null
+  ],
+  "H22": [
+   "=IF($D22=H$14,$F22,\"\")",
+   null
+  ],
+  "H23": [
+   "=IF($D23=H$14,$F23,\"\")",
+   null
+  ],
+  "H24": [
+   "=IF($D24=H$14,$F24,\"\")",
+   null
+  ],
+  "H25": [
+   "=IF($D25=H$14,$F25,\"\")",
+   null
+  ],
+  "H26": [
+   "=IF($D26=H$14,$F26,\"\")",
+   null
+  ],
+  "H27": [
+   "=IF($D27=H$14,$F27,\"\")",
+   null
+  ],
+  "H28": [
+   "=IF($D28=H$14,$F28,\"\")",
+   null
+  ],
+  "H29": [
+   "=IF($D29=H$14,$F29,\"\")",
+   null
+  ],
+  "H30": [
+   "=SUM(H15:H29)",
+   0
+  ],
+  "H37": [
+   "P.J.",
+   "P.J."
+  ],
+  "H39": [
+   "Cheque #",
+   "Cheque #"
+  ],
+  "H41": [
+   "Date Paid",
+   "Date Paid"
+  ],
+  "I14": [
+   "Lunch",
+   "Lunch"
+  ],
+  "I15": [
+   "=IF($D15=I$14,$F15,\"\")",
+   null
+  ],
+  "I16": [
+   "=IF($D16=I$14,$F16,\"\")",
+   null
+  ],
+  "I17": [
+   "=IF($D17=I$14,$F17,\"\")",
+   null
+  ],
+  "I18": [
+   "=IF($D18=I$14,$F18,\"\")",
+   null
+  ],
+  "I19": [
+   "=IF($D19=I$14,$F19,\"\")",
+   null
+  ],
+  "I20": [
+   "=IF($D20=I$14,$F20,\"\")",
+   null
+  ],
+  "I21": [
+   "=IF($D21=I$14,$F21,\"\")",
+   null
+  ],
+  "I22": [
+   "=IF($D22=I$14,$F22,\"\")",
+   null
+  ],
+  "I23": [
+   "=IF($D23=I$14,$F23,\"\")",
+   null
+  ],
+  "I24": [
+   "=IF($D24=I$14,$F24,\"\")",
+   null
+  ],
+  "I25": [
+   "=IF($D25=I$14,$F25,\"\")",
+   null
+  ],
+  "I26": [
+   "=IF($D26=I$14,$F26,\"\")",
+   null
+  ],
+  "I27": [
+   "=IF($D27=I$14,$F27,\"\")",
+   null
+  ],
+  "I28": [
+   "=IF($D28=I$14,$F28,\"\")",
+   null
+  ],
+  "I29": [
+   "=IF($D29=I$14,$F29,\"\")",
+   null
+  ],
+  "I30": [
+   "=SUM(I15:I29)",
+   0
+  ],
+  "J14": [
+   "Dinner",
+   "Dinner"
+  ],
+  "J15": [
+   "=IF($D15=J$14,$F15,\"\")",
+   null
+  ],
+  "J16": [
+   "=IF($D16=J$14,$F16,\"\")",
+   null
+  ],
+  "J17": [
+   "=IF($D17=J$14,$F17,\"\")",
+   null
+  ],
+  "J18": [
+   "=IF($D18=J$14,$F18,\"\")",
+   null
+  ],
+  "J19": [
+   "=IF($D19=J$14,$F19,\"\")",
+   null
+  ],
+  "J20": [
+   "=IF($D20=J$14,$F20,\"\")",
+   null
+  ],
+  "J21": [
+   "=IF($D21=J$14,$F21,\"\")",
+   null
+  ],
+  "J22": [
+   "=IF($D22=J$14,$F22,\"\")",
+   null
+  ],
+  "J23": [
+   "=IF($D23=J$14,$F23,\"\")",
+   null
+  ],
+  "J24": [
+   "=IF($D24=J$14,$F24,\"\")",
+   null
+  ],
+  "J25": [
+   "=IF($D25=J$14,$F25,\"\")",
+   null
+  ],
+  "J26": [
+   "=IF($D26=J$14,$F26,\"\")",
+   null
+  ],
+  "J27": [
+   "=IF($D27=J$14,$F27,\"\")",
+   null
+  ],
+  "J28": [
+   "=IF($D28=J$14,$F28,\"\")",
+   null
+  ],
+  "J29": [
+   "=IF($D29=J$14,$F29,\"\")",
+   null
+  ],
+  "J30": [
+   "=SUM(J15:J29)",
+   0
+  ],
+  "K14": [
+   "Late Meal / Overtime",
+   "Late Meal / Overtime"
+  ],
+  "K15": [
+   "=IF($D15=K$14,$F15,\"\")",
+   null
+  ],
+  "K16": [
+   "=IF($D16=K$14,$F16,\"\")",
+   null
+  ],
+  "K17": [
+   "=IF($D17=K$14,$F17,\"\")",
+   null
+  ],
+  "K18": [
+   "=IF($D18=K$14,$F18,\"\")",
+   null
+  ],
+  "K19": [
+   "=IF($D19=K$14,$F19,\"\")",
+   null
+  ],
+  "K20": [
+   "=IF($D20=K$14,$F20,\"\")",
+   null
+  ],
+  "K21": [
+   "=IF($D21=K$14,$F21,\"\")",
+   null
+  ],
+  "K22": [
+   "=IF($D22=K$14,$F22,\"\")",
+   null
+  ],
+  "K23": [
+   "=IF($D23=K$14,$F23,\"\")",
+   null
+  ],
+  "K24": [
+   "=IF($D24=K$14,$F24,\"\")",
+   null
+  ],
+  "K25": [
+   "=IF($D25=K$14,$F25,\"\")",
+   null
+  ],
+  "K26": [
+   "=IF($D26=K$14,$F26,\"\")",
+   null
+  ],
+  "K27": [
+   "=IF($D27=K$14,$F27,\"\")",
+   null
+  ],
+  "K28": [
+   "=IF($D28=K$14,$F28,\"\")",
+   null
+  ],
+  "K29": [
+   "=IF($D29=K$14,$F29,\"\")",
+   null
+  ],
+  "K30": [
+   "=SUM(K15:K29)",
+   0
+  ],
+  "L10": [
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED",
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED"
+  ],
+  "L11": [
+   "SINCE LAST EXPENSE)",
+   "SINCE LAST EXPENSE)"
+  ],
+  "L14": [
+   "Per Diem",
+   "Per Diem"
+  ],
+  "L15": [
+   100,
+   100
+  ],
+  "L16": [
+   100,
+   100
+  ],
+  "L17": [
+   100,
+   100
+  ],
+  "L18": [
+   100,
+   100
+  ],
+  "L19": [
+   100,
+   100
+  ],
+  "L20": [
+   50,
+   50
+  ],
+  "L21": [
+   "=IF(OR($D21='Expense Descriptions'!$A$2,$D21='Expense Descriptions'!$A$3),$F21,\"\")",
+   null
+  ],
+  "L22": [
+   "=IF(OR($D22='Expense Descriptions'!$A$2,$D22='Expense Descriptions'!$A$3),$F22,\"\")",
+   null
+  ],
+  "L23": [
+   "=IF(OR($D23='Expense Descriptions'!$A$2,$D23='Expense Descriptions'!$A$3),$F23,\"\")",
+   null
+  ],
+  "L24": [
+   "=IF(OR($D24='Expense Descriptions'!$A$2,$D24='Expense Descriptions'!$A$3),$F24,\"\")",
+   null
+  ],
+  "L25": [
+   "=IF(OR($D25='Expense Descriptions'!$A$2,$D25='Expense Descriptions'!$A$3),$F25,\"\")",
+   null
+  ],
+  "L26": [
+   "=IF(OR($D26='Expense Descriptions'!$A$2,$D26='Expense Descriptions'!$A$3),$F26,\"\")",
+   null
+  ],
+  "L27": [
+   "=IF(OR($D27='Expense Descriptions'!$A$2,$D27='Expense Descriptions'!$A$3),$F27,\"\")",
+   null
+  ],
+  "L28": [
+   "=IF(OR($D28='Expense Descriptions'!$A$2,$D28='Expense Descriptions'!$A$3),$F28,\"\")",
+   null
+  ],
+  "L29": [
+   "=IF(OR($D29='Expense Descriptions'!$A$2,$D29='Expense Descriptions'!$A$3),$F29,\"\")",
+   null
+  ],
+  "L30": [
+   "=SUM(L15:L29)",
+   550
+  ],
+  "L4": [
+   "WEEK ENDING",
+   "WEEK ENDING"
+  ],
+  "L5": [
+   "NAME",
+   "NAME"
+  ],
+  "L6": [
+   "DEPARTMENT",
+   "DEPARTMENT"
+  ],
+  "L7": [
+   "CUSTOMER TRIP",
+   "CUSTOMER TRIP"
+  ],
+  "L8": [
+   "TRIP DESTINATION",
+   "TRIP DESTINATION"
+  ],
+  "M14": [
+   "Incidentals",
+   "Incidentals"
+  ],
+  "M15": [
+   "=IF($D15=M$14,$F15,\"\")",
+   null
+  ],
+  "M16": [
+   "=IF($D16=M$14,$F16,\"\")",
+   null
+  ],
+  "M17": [
+   "=IF($D17=M$14,$F17,\"\")",
+   null
+  ],
+  "M18": [
+   "=IF($D18=M$14,$F18,\"\")",
+   null
+  ],
+  "M19": [
+   "=IF($D19=M$14,$F19,\"\")",
+   null
+  ],
+  "M20": [
+   "=IF($D20=M$14,$F20,\"\")",
+   null
+  ],
+  "M21": [
+   "=IF($D21=M$14,$F21,\"\")",
+   null
+  ],
+  "M22": [
+   "=IF($D22=M$14,$F22,\"\")",
+   null
+  ],
+  "M23": [
+   "=IF($D23=M$14,$F23,\"\")",
+   null
+  ],
+  "M24": [
+   "=IF($D24=M$14,$F24,\"\")",
+   null
+  ],
+  "M25": [
+   "=IF($D25=M$14,$F25,\"\")",
+   null
+  ],
+  "M26": [
+   "=IF($D26=M$14,$F26,\"\")",
+   null
+  ],
+  "M27": [
+   "=IF($D27=M$14,$F27,\"\")",
+   null
+  ],
+  "M28": [
+   "=IF($D28=M$14,$F28,\"\")",
+   null
+  ],
+  "M29": [
+   "=IF($D29=M$14,$F29,\"\")",
+   null
+  ],
+  "M30": [
+   "=SUM(M15:M29)",
+   0
+  ],
+  "M35": [
+   "Per Diem Calculator\n(based on above noted Trip Destination)",
+   "Per Diem Calculator\n(based on above noted Trip Destination)"
+  ],
+  "M38": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "M39": [
+   "Per Diam - Partial Day",
+   "Per Diam - Partial Day"
+  ],
+  "N14": [
+   "Hotel",
+   "Hotel"
+  ],
+  "N15": [
+   "=IF($D15=N$14,$F15,\"\")",
+   null
+  ],
+  "N16": [
+   "=IF($D16=N$14,$F16,\"\")",
+   null
+  ],
+  "N17": [
+   "=IF($D17=N$14,$F17,\"\")",
+   null
+  ],
+  "N18": [
+   "=IF($D18=N$14,$F18,\"\")",
+   null
+  ],
+  "N19": [
+   "=IF($D19=N$14,$F19,\"\")",
+   null
+  ],
+  "N20": [
+   "=IF($D20=N$14,$F20,\"\")",
+   null
+  ],
+  "N21": [
+   "=IF($D21=N$14,$F21,\"\")",
+   null
+  ],
+  "N22": [
+   "=IF($D22=N$14,$F22,\"\")",
+   null
+  ],
+  "N23": [
+   "=IF($D23=N$14,$F23,\"\")",
+   null
+  ],
+  "N24": [
+   "=IF($D24=N$14,$F24,\"\")",
+   null
+  ],
+  "N25": [
+   "=IF($D25=N$14,$F25,\"\")",
+   null
+  ],
+  "N26": [
+   "=IF($D26=N$14,$F26,\"\")",
+   null
+  ],
+  "N27": [
+   "=IF($D27=N$14,$F27,\"\")",
+   null
+  ],
+  "N28": [
+   "=IF($D28=N$14,$F28,\"\")",
+   null
+  ],
+  "N29": [
+   "=IF($D29=N$14,$F29,\"\")",
+   null
+  ],
+  "N30": [
+   "=SUM(N15:N29)",
+   0
+  ],
+  "N4": [
+   "2026-07-11",
+   "2026-07-11"
+  ],
+  "N5": [
+   "Jamie Chen",
+   "Jamie Chen"
+  ],
+  "N6": [
+   "Service",
+   "Service"
+  ],
+  "N7": [
+   "Northwind Studios",
+   "Northwind Studios"
+  ],
+  "N8": [
+   "United States",
+   "United States"
+  ],
+  "O14": [
+   "Auto Rental",
+   "Auto Rental"
+  ],
+  "O15": [
+   "=IF($D15=O$14,$F15,\"\")",
+   null
+  ],
+  "O16": [
+   "=IF($D16=O$14,$F16,\"\")",
+   null
+  ],
+  "O17": [
+   "=IF($D17=O$14,$F17,\"\")",
+   null
+  ],
+  "O18": [
+   "=IF($D18=O$14,$F18,\"\")",
+   null
+  ],
+  "O19": [
+   "=IF($D19=O$14,$F19,\"\")",
+   null
+  ],
+  "O20": [
+   "=IF($D20=O$14,$F20,\"\")",
+   null
+  ],
+  "O21": [
+   "=IF($D21=O$14,$F21,\"\")",
+   null
+  ],
+  "O22": [
+   "=IF($D22=O$14,$F22,\"\")",
+   null
+  ],
+  "O23": [
+   "=IF($D23=O$14,$F23,\"\")",
+   null
+  ],
+  "O24": [
+   "=IF($D24=O$14,$F24,\"\")",
+   null
+  ],
+  "O25": [
+   "=IF($D25=O$14,$F25,\"\")",
+   null
+  ],
+  "O26": [
+   "=IF($D26=O$14,$F26,\"\")",
+   null
+  ],
+  "O27": [
+   "=IF($D27=O$14,$F27,\"\")",
+   null
+  ],
+  "O28": [
+   "=IF($D28=O$14,$F28,\"\")",
+   null
+  ],
+  "O29": [
+   "=IF($D29=O$14,$F29,\"\")",
+   null
+  ],
+  "O30": [
+   "=SUM(O15:O29)",
+   0
+  ],
+  "O37": [
+   "USD$",
+   "USD$"
+  ],
+  "O38": [
+   "=IFERROR(VLOOKUP(N8,'Per Diem (USD$)'!B5:G11,6,FALSE),100)",
+   100
+  ],
+  "O39": [
+   "=ROUND(O38*0.5,1)",
+   50
+  ],
+  "P14": [
+   "Parking",
+   "Parking"
+  ],
+  "P15": [
+   "=IF($D15=P$14,$F15,\"\")",
+   null
+  ],
+  "P16": [
+   "=IF($D16=P$14,$F16,\"\")",
+   null
+  ],
+  "P17": [
+   "=IF($D17=P$14,$F17,\"\")",
+   null
+  ],
+  "P18": [
+   "=IF($D18=P$14,$F18,\"\")",
+   null
+  ],
+  "P19": [
+   "=IF($D19=P$14,$F19,\"\")",
+   null
+  ],
+  "P20": [
+   "=IF($D20=P$14,$F20,\"\")",
+   null
+  ],
+  "P21": [
+   "=IF($D21=P$14,$F21,\"\")",
+   null
+  ],
+  "P22": [
+   "=IF($D22=P$14,$F22,\"\")",
+   null
+  ],
+  "P23": [
+   "=IF($D23=P$14,$F23,\"\")",
+   null
+  ],
+  "P24": [
+   "=IF($D24=P$14,$F24,\"\")",
+   null
+  ],
+  "P25": [
+   "=IF($D25=P$14,$F25,\"\")",
+   null
+  ],
+  "P26": [
+   "=IF($D26=P$14,$F26,\"\")",
+   null
+  ],
+  "P27": [
+   "=IF($D27=P$14,$F27,\"\")",
+   null
+  ],
+  "P28": [
+   "=IF($D28=P$14,$F28,\"\")",
+   null
+  ],
+  "P29": [
+   "=IF($D29=P$14,$F29,\"\")",
+   null
+  ],
+  "P30": [
+   "=SUM(P15:P29)",
+   0
+  ],
+  "P37": [
+   "Local Currency",
+   "Local Currency"
+  ],
+  "P38": [
+   "=VLOOKUP(N8,'Per Diem (Mixed Currency)'!B5:H14,7,FALSE)",
+   100
+  ],
+  "P39": [
+   "=ROUND(P38*0.5,1)",
+   50
+  ],
+  "Q14": [
+   "Taxi",
+   "Taxi"
+  ],
+  "Q15": [
+   "=IF($D15=Q$14,$F15,\"\")",
+   null
+  ],
+  "Q16": [
+   "=IF($D16=Q$14,$F16,\"\")",
+   null
+  ],
+  "Q17": [
+   "=IF($D17=Q$14,$F17,\"\")",
+   null
+  ],
+  "Q18": [
+   "=IF($D18=Q$14,$F18,\"\")",
+   null
+  ],
+  "Q19": [
+   "=IF($D19=Q$14,$F19,\"\")",
+   null
+  ],
+  "Q20": [
+   "=IF($D20=Q$14,$F20,\"\")",
+   null
+  ],
+  "Q21": [
+   "=IF($D21=Q$14,$F21,\"\")",
+   null
+  ],
+  "Q22": [
+   "=IF($D22=Q$14,$F22,\"\")",
+   null
+  ],
+  "Q23": [
+   "=IF($D23=Q$14,$F23,\"\")",
+   null
+  ],
+  "Q24": [
+   "=IF($D24=Q$14,$F24,\"\")",
+   null
+  ],
+  "Q25": [
+   "=IF($D25=Q$14,$F25,\"\")",
+   null
+  ],
+  "Q26": [
+   "=IF($D26=Q$14,$F26,\"\")",
+   null
+  ],
+  "Q27": [
+   "=IF($D27=Q$14,$F27,\"\")",
+   null
+  ],
+  "Q28": [
+   "=IF($D28=Q$14,$F28,\"\")",
+   null
+  ],
+  "Q29": [
+   "=IF($D29=Q$14,$F29,\"\")",
+   null
+  ],
+  "Q30": [
+   "=SUM(Q15:Q29)",
+   0
+  ],
+  "R14": [
+   "Fuel",
+   "Fuel"
+  ],
+  "R15": [
+   "=IF($D15=R$14,$F15,\"\")",
+   null
+  ],
+  "R16": [
+   "=IF($D16=R$14,$F16,\"\")",
+   null
+  ],
+  "R17": [
+   "=IF($D17=R$14,$F17,\"\")",
+   null
+  ],
+  "R18": [
+   "=IF($D18=R$14,$F18,\"\")",
+   null
+  ],
+  "R19": [
+   "=IF($D19=R$14,$F19,\"\")",
+   null
+  ],
+  "R20": [
+   "=IF($D20=R$14,$F20,\"\")",
+   null
+  ],
+  "R21": [
+   "=IF($D21=R$14,$F21,\"\")",
+   null
+  ],
+  "R22": [
+   "=IF($D22=R$14,$F22,\"\")",
+   null
+  ],
+  "R23": [
+   "=IF($D23=R$14,$F23,\"\")",
+   null
+  ],
+  "R24": [
+   "=IF($D24=R$14,$F24,\"\")",
+   null
+  ],
+  "R25": [
+   "=IF($D25=R$14,$F25,\"\")",
+   null
+  ],
+  "R26": [
+   "=IF($D26=R$14,$F26,\"\")",
+   null
+  ],
+  "R27": [
+   "=IF($D27=R$14,$F27,\"\")",
+   null
+  ],
+  "R28": [
+   "=IF($D28=R$14,$F28,\"\")",
+   null
+  ],
+  "R29": [
+   "=IF($D29=R$14,$F29,\"\")",
+   null
+  ],
+  "S14": [
+   "Mileage (@.55/M, .50/KM)",
+   "Mileage (@.55/M, .50/KM)"
+  ],
+  "S15": [
+   "=IF($D15=S$14,$F15,\"\")",
+   null
+  ],
+  "S16": [
+   "=IF($D16=S$14,$F16,\"\")",
+   null
+  ],
+  "S17": [
+   "=IF($D17=S$14,$F17,\"\")",
+   null
+  ],
+  "S18": [
+   "=IF($D18=S$14,$F18,\"\")",
+   null
+  ],
+  "S19": [
+   "=IF($D19=S$14,$F19,\"\")",
+   null
+  ],
+  "S20": [
+   "=IF($D20=S$14,$F20,\"\")",
+   null
+  ],
+  "S21": [
+   "=IF($D21=S$14,$F21,\"\")",
+   null
+  ],
+  "S22": [
+   "=IF($D22=S$14,$F22,\"\")",
+   null
+  ],
+  "S23": [
+   "=IF($D23=S$14,$F23,\"\")",
+   null
+  ],
+  "S24": [
+   "=IF($D24=S$14,$F24,\"\")",
+   null
+  ],
+  "S25": [
+   "=IF($D25=S$14,$F25,\"\")",
+   null
+  ],
+  "S26": [
+   "=IF($D26=S$14,$F26,\"\")",
+   null
+  ],
+  "S27": [
+   "=IF($D27=S$14,$F27,\"\")",
+   null
+  ],
+  "S28": [
+   "=IF($D28=S$14,$F28,\"\")",
+   null
+  ],
+  "S29": [
+   "=IF($D29=S$14,$F29,\"\")",
+   null
+  ],
+  "S30": [
+   "=SUM(S15:S29)",
+   0
+  ],
+  "S31": [
+   "Subtotal",
+   "Subtotal"
+  ],
+  "S32": [
+   "Advances",
+   "Advances"
+  ],
+  "S33": [
+   "Total",
+   "Total"
+  ],
+  "S37": [
+   "Signature",
+   "Signature"
+  ],
+  "S39": [
+   "Approved",
+   "Approved"
+  ],
+  "S41": [
+   "Date",
+   "Date"
+  ],
+  "T14": [
+   "Other",
+   "Other"
+  ],
+  "T15": [
+   "=IF($D15=T$14,$F15,\"\")",
+   null
+  ],
+  "T16": [
+   "=IF($D16=T$14,$F16,\"\")",
+   null
+  ],
+  "T17": [
+   "=IF($D17=T$14,$F17,\"\")",
+   null
+  ],
+  "T18": [
+   "=IF($D18=T$14,$F18,\"\")",
+   null
+  ],
+  "T19": [
+   "=IF($D19=T$14,$F19,\"\")",
+   null
+  ],
+  "T20": [
+   "=IF($D20=T$14,$F20,\"\")",
+   null
+  ],
+  "T21": [
+   "=IF($D21=T$14,$F21,\"\")",
+   null
+  ],
+  "T22": [
+   "=IF($D22=T$14,$F22,\"\")",
+   null
+  ],
+  "T23": [
+   "=IF($D23=T$14,$F23,\"\")",
+   null
+  ],
+  "T24": [
+   "=IF($D24=T$14,$F24,\"\")",
+   null
+  ],
+  "T25": [
+   "=IF($D25=T$14,$F25,\"\")",
+   null
+  ],
+  "T26": [
+   "=IF($D26=T$14,$F26,\"\")",
+   null
+  ],
+  "T27": [
+   "=IF($D27=T$14,$F27,\"\")",
+   null
+  ],
+  "T28": [
+   "=IF($D28=T$14,$F28,\"\")",
+   null
+  ],
+  "T29": [
+   "=IF($D29=T$14,$F29,\"\")",
+   null
+  ],
+  "T30": [
+   "=SUM(T15:T29)",
+   0
+  ],
+  "U14": [
+   "Total",
+   "Total"
+  ],
+  "U15": [
+   "=SUM(G15:T15)",
+   100
+  ],
+  "U16": [
+   "=SUM(G16:T16)",
+   100
+  ],
+  "U17": [
+   "=SUM(G17:T17)",
+   100
+  ],
+  "U18": [
+   "=SUM(G18:T18)",
+   100
+  ],
+  "U19": [
+   "=SUM(G19:T19)",
+   100
+  ],
+  "U20": [
+   "=SUM(G20:T20)",
+   50
+  ],
+  "U21": [
+   "=SUM(G21:T21)",
+   0
+  ],
+  "U22": [
+   "=SUM(G22:T22)",
+   0
+  ],
+  "U23": [
+   "=SUM(G23:T23)",
+   0
+  ],
+  "U24": [
+   "=SUM(G24:T24)",
+   0
+  ],
+  "U25": [
+   "=SUM(G25:T25)",
+   0
+  ],
+  "U26": [
+   "=SUM(G26:T26)",
+   0
+  ],
+  "U27": [
+   "=SUM(G27:T27)",
+   0
+  ],
+  "U28": [
+   "=SUM(G28:T28)",
+   0
+  ],
+  "U29": [
+   "=SUM(G29:T29)",
+   0
+  ],
+  "U31": [
+   "=SUM(U15:U29)",
+   550
+  ],
+  "U33": [
+   "=(U31-U32)",
+   550
+  ],
+  "V13": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "V14": [
+   "HST",
+   "HST"
+  ],
+  "V15": [
+   0,
+   0
+  ],
+  "V16": [
+   0,
+   0
+  ],
+  "V17": [
+   0,
+   0
+  ],
+  "V18": [
+   0,
+   0
+  ],
+  "V19": [
+   0,
+   0
+  ],
+  "V20": [
+   0,
+   0
+  ],
+  "V21": [
+   0,
+   0
+  ],
+  "V22": [
+   0,
+   0
+  ],
+  "V23": [
+   0,
+   0
+  ],
+  "V24": [
+   0,
+   0
+  ],
+  "V25": [
+   0,
+   0
+  ],
+  "V26": [
+   0,
+   0
+  ],
+  "V27": [
+   0,
+   0
+  ],
+  "V28": [
+   0,
+   0
+  ],
+  "V29": [
+   0,
+   0
+  ],
+  "V31": [
+   "=SUM(V15:V29)",
+   0
+  ],
+  "W14": [
+   "Net of HST",
+   "Net of HST"
+  ],
+  "W15": [
+   "=+U15-V15",
+   100
+  ],
+  "W16": [
+   "=+U16-V16",
+   100
+  ],
+  "W17": [
+   "=+U17-V17",
+   100
+  ],
+  "W18": [
+   "=+U18-V18",
+   100
+  ],
+  "W19": [
+   "=+U19-V19",
+   100
+  ],
+  "W20": [
+   "=+U20-V20",
+   50
+  ],
+  "W21": [
+   "=+U21-V21",
+   0
+  ],
+  "W22": [
+   "=+U22-V22",
+   0
+  ],
+  "W23": [
+   "=+U23-V23",
+   0
+  ],
+  "W24": [
+   "=+U24-V24",
+   0
+  ],
+  "W25": [
+   "=+U25-V25",
+   0
+  ],
+  "W26": [
+   "=+U26-V26",
+   0
+  ],
+  "W27": [
+   "=+U27-V27",
+   0
+  ],
+  "W28": [
+   "=+U28-V28",
+   0
+  ],
+  "W29": [
+   "=+U29-V29",
+   0
+  ],
+  "W31": [
+   "=SUM(W15:W29)",
+   550
+  ]
+ },
+ "Week Ending 20-Jun-26": {
+  "A2": [
+   "evertz",
+   "evertz"
+  ],
+  "B14": [
+   "Receipt #",
+   "Receipt #"
+  ],
+  "B31": [
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order.",
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order."
+  ],
+  "B33": [
+   "*Please report one currency per report.",
+   "*Please report one currency per report."
+  ],
+  "B37": [
+   "A/C",
+   "A/C"
+  ],
+  "B38": [
+   "A/C",
+   "A/C"
+  ],
+  "B39": [
+   "A/C",
+   "A/C"
+  ],
+  "B40": [
+   "A/C",
+   "A/C"
+  ],
+  "B41": [
+   "A/C",
+   "A/C"
+  ],
+  "C14": [
+   "Date",
+   "Date"
+  ],
+  "C15": [
+   "2026-06-15",
+   "2026-06-15"
+  ],
+  "C16": [
+   "2026-06-16",
+   "2026-06-16"
+  ],
+  "C17": [
+   "2026-06-17",
+   "2026-06-17"
+  ],
+  "C18": [
+   "2026-06-18",
+   "2026-06-18"
+  ],
+  "C19": [
+   "2026-06-19",
+   "2026-06-19"
+  ],
+  "C20": [
+   "2026-06-20",
+   "2026-06-20"
+  ],
+  "C35": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "D14": [
+   "Description",
+   "Description"
+  ],
+  "D15": [
+   "Per Diam - Partial Day",
+   "Per Diam - Partial Day"
+  ],
+  "D16": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D17": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D18": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D19": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D20": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "E14": [
+   "Currency*",
+   "Currency*"
+  ],
+  "E15": [
+   "USD",
+   "USD"
+  ],
+  "E16": [
+   "USD",
+   "USD"
+  ],
+  "E17": [
+   "USD",
+   "USD"
+  ],
+  "E18": [
+   "USD",
+   "USD"
+  ],
+  "E19": [
+   "USD",
+   "USD"
+  ],
+  "E20": [
+   "USD",
+   "USD"
+  ],
+  "E37": [
+   "Amount",
+   "Amount"
+  ],
+  "E38": [
+   "Amount",
+   "Amount"
+  ],
+  "E39": [
+   "Amount",
+   "Amount"
+  ],
+  "E40": [
+   "Amount",
+   "Amount"
+  ],
+  "E41": [
+   "Amount",
+   "Amount"
+  ],
+  "F14": [
+   "Amount",
+   "Amount"
+  ],
+  "F2": [
+   "TRAVEL EXPENSE REPORT",
+   "TRAVEL EXPENSE REPORT"
+  ],
+  "G14": [
+   "Airfare / Train",
+   "Airfare / Train"
+  ],
+  "G15": [
+   "=IF($D15=G$14,$F15,\"\")",
+   null
+  ],
+  "G16": [
+   "=IF($D16=G$14,$F16,\"\")",
+   null
+  ],
+  "G17": [
+   "=IF($D17=G$14,$F17,\"\")",
+   null
+  ],
+  "G18": [
+   "=IF($D18=G$14,$F18,\"\")",
+   null
+  ],
+  "G19": [
+   "=IF($D19=G$14,$F19,\"\")",
+   null
+  ],
+  "G20": [
+   "=IF($D20=G$14,$F20,\"\")",
+   null
+  ],
+  "G21": [
+   "=IF($D21=G$14,$F21,\"\")",
+   null
+  ],
+  "G22": [
+   "=IF($D22=G$14,$F22,\"\")",
+   null
+  ],
+  "G23": [
+   "=IF($D23=G$14,$F23,\"\")",
+   null
+  ],
+  "G24": [
+   "=IF($D24=G$14,$F24,\"\")",
+   null
+  ],
+  "G25": [
+   "=IF($D25=G$14,$F25,\"\")",
+   null
+  ],
+  "G26": [
+   "=IF($D26=G$14,$F26,\"\")",
+   null
+  ],
+  "G27": [
+   "=IF($D27=G$14,$F27,\"\")",
+   null
+  ],
+  "G28": [
+   "=IF($D28=G$14,$F28,\"\")",
+   null
+  ],
+  "G29": [
+   "=IF($D29=G$14,$F29,\"\")",
+   null
+  ],
+  "G30": [
+   "=SUM(G15:G29)",
+   0
+  ],
+  "H14": [
+   "Breakfast",
+   "Breakfast"
+  ],
+  "H15": [
+   "=IF($D15=H$14,$F15,\"\")",
+   null
+  ],
+  "H16": [
+   "=IF($D16=H$14,$F16,\"\")",
+   null
+  ],
+  "H17": [
+   "=IF($D17=H$14,$F17,\"\")",
+   null
+  ],
+  "H18": [
+   "=IF($D18=H$14,$F18,\"\")",
+   null
+  ],
+  "H19": [
+   "=IF($D19=H$14,$F19,\"\")",
+   null
+  ],
+  "H20": [
+   "=IF($D20=H$14,$F20,\"\")",
+   null
+  ],
+  "H21": [
+   "=IF($D21=H$14,$F21,\"\")",
+   null
+  ],
+  "H22": [
+   "=IF($D22=H$14,$F22,\"\")",
+   null
+  ],
+  "H23": [
+   "=IF($D23=H$14,$F23,\"\")",
+   null
+  ],
+  "H24": [
+   "=IF($D24=H$14,$F24,\"\")",
+   null
+  ],
+  "H25": [
+   "=IF($D25=H$14,$F25,\"\")",
+   null
+  ],
+  "H26": [
+   "=IF($D26=H$14,$F26,\"\")",
+   null
+  ],
+  "H27": [
+   "=IF($D27=H$14,$F27,\"\")",
+   null
+  ],
+  "H28": [
+   "=IF($D28=H$14,$F28,\"\")",
+   null
+  ],
+  "H29": [
+   "=IF($D29=H$14,$F29,\"\")",
+   null
+  ],
+  "H30": [
+   "=SUM(H15:H29)",
+   0
+  ],
+  "H37": [
+   "P.J.",
+   "P.J."
+  ],
+  "H39": [
+   "Cheque #",
+   "Cheque #"
+  ],
+  "H41": [
+   "Date Paid",
+   "Date Paid"
+  ],
+  "I14": [
+   "Lunch",
+   "Lunch"
+  ],
+  "I15": [
+   "=IF($D15=I$14,$F15,\"\")",
+   null
+  ],
+  "I16": [
+   "=IF($D16=I$14,$F16,\"\")",
+   null
+  ],
+  "I17": [
+   "=IF($D17=I$14,$F17,\"\")",
+   null
+  ],
+  "I18": [
+   "=IF($D18=I$14,$F18,\"\")",
+   null
+  ],
+  "I19": [
+   "=IF($D19=I$14,$F19,\"\")",
+   null
+  ],
+  "I20": [
+   "=IF($D20=I$14,$F20,\"\")",
+   null
+  ],
+  "I21": [
+   "=IF($D21=I$14,$F21,\"\")",
+   null
+  ],
+  "I22": [
+   "=IF($D22=I$14,$F22,\"\")",
+   null
+  ],
+  "I23": [
+   "=IF($D23=I$14,$F23,\"\")",
+   null
+  ],
+  "I24": [
+   "=IF($D24=I$14,$F24,\"\")",
+   null
+  ],
+  "I25": [
+   "=IF($D25=I$14,$F25,\"\")",
+   null
+  ],
+  "I26": [
+   "=IF($D26=I$14,$F26,\"\")",
+   null
+  ],
+  "I27": [
+   "=IF($D27=I$14,$F27,\"\")",
+   null
+  ],
+  "I28": [
+   "=IF($D28=I$14,$F28,\"\")",
+   null
+  ],
+  "I29": [
+   "=IF($D29=I$14,$F29,\"\")",
+   null
+  ],
+  "I30": [
+   "=SUM(I15:I29)",
+   0
+  ],
+  "J14": [
+   "Dinner",
+   "Dinner"
+  ],
+  "J15": [
+   "=IF($D15=J$14,$F15,\"\")",
+   null
+  ],
+  "J16": [
+   "=IF($D16=J$14,$F16,\"\")",
+   null
+  ],
+  "J17": [
+   "=IF($D17=J$14,$F17,\"\")",
+   null
+  ],
+  "J18": [
+   "=IF($D18=J$14,$F18,\"\")",
+   null
+  ],
+  "J19": [
+   "=IF($D19=J$14,$F19,\"\")",
+   null
+  ],
+  "J20": [
+   "=IF($D20=J$14,$F20,\"\")",
+   null
+  ],
+  "J21": [
+   "=IF($D21=J$14,$F21,\"\")",
+   null
+  ],
+  "J22": [
+   "=IF($D22=J$14,$F22,\"\")",
+   null
+  ],
+  "J23": [
+   "=IF($D23=J$14,$F23,\"\")",
+   null
+  ],
+  "J24": [
+   "=IF($D24=J$14,$F24,\"\")",
+   null
+  ],
+  "J25": [
+   "=IF($D25=J$14,$F25,\"\")",
+   null
+  ],
+  "J26": [
+   "=IF($D26=J$14,$F26,\"\")",
+   null
+  ],
+  "J27": [
+   "=IF($D27=J$14,$F27,\"\")",
+   null
+  ],
+  "J28": [
+   "=IF($D28=J$14,$F28,\"\")",
+   null
+  ],
+  "J29": [
+   "=IF($D29=J$14,$F29,\"\")",
+   null
+  ],
+  "J30": [
+   "=SUM(J15:J29)",
+   0
+  ],
+  "K14": [
+   "Late Meal / Overtime",
+   "Late Meal / Overtime"
+  ],
+  "K15": [
+   "=IF($D15=K$14,$F15,\"\")",
+   null
+  ],
+  "K16": [
+   "=IF($D16=K$14,$F16,\"\")",
+   null
+  ],
+  "K17": [
+   "=IF($D17=K$14,$F17,\"\")",
+   null
+  ],
+  "K18": [
+   "=IF($D18=K$14,$F18,\"\")",
+   null
+  ],
+  "K19": [
+   "=IF($D19=K$14,$F19,\"\")",
+   null
+  ],
+  "K20": [
+   "=IF($D20=K$14,$F20,\"\")",
+   null
+  ],
+  "K21": [
+   "=IF($D21=K$14,$F21,\"\")",
+   null
+  ],
+  "K22": [
+   "=IF($D22=K$14,$F22,\"\")",
+   null
+  ],
+  "K23": [
+   "=IF($D23=K$14,$F23,\"\")",
+   null
+  ],
+  "K24": [
+   "=IF($D24=K$14,$F24,\"\")",
+   null
+  ],
+  "K25": [
+   "=IF($D25=K$14,$F25,\"\")",
+   null
+  ],
+  "K26": [
+   "=IF($D26=K$14,$F26,\"\")",
+   null
+  ],
+  "K27": [
+   "=IF($D27=K$14,$F27,\"\")",
+   null
+  ],
+  "K28": [
+   "=IF($D28=K$14,$F28,\"\")",
+   null
+  ],
+  "K29": [
+   "=IF($D29=K$14,$F29,\"\")",
+   null
+  ],
+  "K30": [
+   "=SUM(K15:K29)",
+   0
+  ],
+  "L10": [
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED",
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED"
+  ],
+  "L11": [
+   "SINCE LAST EXPENSE)",
+   "SINCE LAST EXPENSE)"
+  ],
+  "L14": [
+   "Per Diem",
+   "Per Diem"
+  ],
+  "L15": [
+   50,
+   50
+  ],
+  "L16": [
+   100,
+   100
+  ],
+  "L17": [
+   100,
+   100
+  ],
+  "L18": [
+   100,
+   100
+  ],
+  "L19": [
+   100,
+   100
+  ],
+  "L20": [
+   100,
+   100
+  ],
+  "L21": [
+   "=IF(OR($D21='Expense Descriptions'!$A$2,$D21='Expense Descriptions'!$A$3),$F21,\"\")",
+   null
+  ],
+  "L22": [
+   "=IF(OR($D22='Expense Descriptions'!$A$2,$D22='Expense Descriptions'!$A$3),$F22,\"\")",
+   null
+  ],
+  "L23": [
+   "=IF(OR($D23='Expense Descriptions'!$A$2,$D23='Expense Descriptions'!$A$3),$F23,\"\")",
+   null
+  ],
+  "L24": [
+   "=IF(OR($D24='Expense Descriptions'!$A$2,$D24='Expense Descriptions'!$A$3),$F24,\"\")",
+   null
+  ],
+  "L25": [
+   "=IF(OR($D25='Expense Descriptions'!$A$2,$D25='Expense Descriptions'!$A$3),$F25,\"\")",
+   null
+  ],
+  "L26": [
+   "=IF(OR($D26='Expense Descriptions'!$A$2,$D26='Expense Descriptions'!$A$3),$F26,\"\")",
+   null
+  ],
+  "L27": [
+   "=IF(OR($D27='Expense Descriptions'!$A$2,$D27='Expense Descriptions'!$A$3),$F27,\"\")",
+   null
+  ],
+  "L28": [
+   "=IF(OR($D28='Expense Descriptions'!$A$2,$D28='Expense Descriptions'!$A$3),$F28,\"\")",
+   null
+  ],
+  "L29": [
+   "=IF(OR($D29='Expense Descriptions'!$A$2,$D29='Expense Descriptions'!$A$3),$F29,\"\")",
+   null
+  ],
+  "L30": [
+   "=SUM(L15:L29)",
+   550
+  ],
+  "L4": [
+   "WEEK ENDING",
+   "WEEK ENDING"
+  ],
+  "L5": [
+   "NAME",
+   "NAME"
+  ],
+  "L6": [
+   "DEPARTMENT",
+   "DEPARTMENT"
+  ],
+  "L7": [
+   "CUSTOMER TRIP",
+   "CUSTOMER TRIP"
+  ],
+  "L8": [
+   "TRIP DESTINATION",
+   "TRIP DESTINATION"
+  ],
+  "M14": [
+   "Incidentals",
+   "Incidentals"
+  ],
+  "M15": [
+   "=IF($D15=M$14,$F15,\"\")",
+   null
+  ],
+  "M16": [
+   "=IF($D16=M$14,$F16,\"\")",
+   null
+  ],
+  "M17": [
+   "=IF($D17=M$14,$F17,\"\")",
+   null
+  ],
+  "M18": [
+   "=IF($D18=M$14,$F18,\"\")",
+   null
+  ],
+  "M19": [
+   "=IF($D19=M$14,$F19,\"\")",
+   null
+  ],
+  "M20": [
+   "=IF($D20=M$14,$F20,\"\")",
+   null
+  ],
+  "M21": [
+   "=IF($D21=M$14,$F21,\"\")",
+   null
+  ],
+  "M22": [
+   "=IF($D22=M$14,$F22,\"\")",
+   null
+  ],
+  "M23": [
+   "=IF($D23=M$14,$F23,\"\")",
+   null
+  ],
+  "M24": [
+   "=IF($D24=M$14,$F24,\"\")",
+   null
+  ],
+  "M25": [
+   "=IF($D25=M$14,$F25,\"\")",
+   null
+  ],
+  "M26": [
+   "=IF($D26=M$14,$F26,\"\")",
+   null
+  ],
+  "M27": [
+   "=IF($D27=M$14,$F27,\"\")",
+   null
+  ],
+  "M28": [
+   "=IF($D28=M$14,$F28,\"\")",
+   null
+  ],
+  "M29": [
+   "=IF($D29=M$14,$F29,\"\")",
+   null
+  ],
+  "M30": [
+   "=SUM(M15:M29)",
+   0
+  ],
+  "M35": [
+   "Per Diem Calculator\n(based on above noted Trip Destination)",
+   "Per Diem Calculator\n(based on above noted Trip Destination)"
+  ],
+  "M38": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "M39": [
+   "Per Diam - Partial Day",
+   "Per Diam - Partial Day"
+  ],
+  "N14": [
+   "Hotel",
+   "Hotel"
+  ],
+  "N15": [
+   "=IF($D15=N$14,$F15,\"\")",
+   null
+  ],
+  "N16": [
+   "=IF($D16=N$14,$F16,\"\")",
+   null
+  ],
+  "N17": [
+   "=IF($D17=N$14,$F17,\"\")",
+   null
+  ],
+  "N18": [
+   "=IF($D18=N$14,$F18,\"\")",
+   null
+  ],
+  "N19": [
+   "=IF($D19=N$14,$F19,\"\")",
+   null
+  ],
+  "N20": [
+   "=IF($D20=N$14,$F20,\"\")",
+   null
+  ],
+  "N21": [
+   "=IF($D21=N$14,$F21,\"\")",
+   null
+  ],
+  "N22": [
+   "=IF($D22=N$14,$F22,\"\")",
+   null
+  ],
+  "N23": [
+   "=IF($D23=N$14,$F23,\"\")",
+   null
+  ],
+  "N24": [
+   "=IF($D24=N$14,$F24,\"\")",
+   null
+  ],
+  "N25": [
+   "=IF($D25=N$14,$F25,\"\")",
+   null
+  ],
+  "N26": [
+   "=IF($D26=N$14,$F26,\"\")",
+   null
+  ],
+  "N27": [
+   "=IF($D27=N$14,$F27,\"\")",
+   null
+  ],
+  "N28": [
+   "=IF($D28=N$14,$F28,\"\")",
+   null
+  ],
+  "N29": [
+   "=IF($D29=N$14,$F29,\"\")",
+   null
+  ],
+  "N30": [
+   "=SUM(N15:N29)",
+   0
+  ],
+  "N4": [
+   "2026-06-20",
+   "2026-06-20"
+  ],
+  "N5": [
+   "Jamie Chen",
+   "Jamie Chen"
+  ],
+  "N6": [
+   "Service",
+   "Service"
+  ],
+  "N7": [
+   "Northwind Studios",
+   "Northwind Studios"
+  ],
+  "N8": [
+   "United States",
+   "United States"
+  ],
+  "O14": [
+   "Auto Rental",
+   "Auto Rental"
+  ],
+  "O15": [
+   "=IF($D15=O$14,$F15,\"\")",
+   null
+  ],
+  "O16": [
+   "=IF($D16=O$14,$F16,\"\")",
+   null
+  ],
+  "O17": [
+   "=IF($D17=O$14,$F17,\"\")",
+   null
+  ],
+  "O18": [
+   "=IF($D18=O$14,$F18,\"\")",
+   null
+  ],
+  "O19": [
+   "=IF($D19=O$14,$F19,\"\")",
+   null
+  ],
+  "O20": [
+   "=IF($D20=O$14,$F20,\"\")",
+   null
+  ],
+  "O21": [
+   "=IF($D21=O$14,$F21,\"\")",
+   null
+  ],
+  "O22": [
+   "=IF($D22=O$14,$F22,\"\")",
+   null
+  ],
+  "O23": [
+   "=IF($D23=O$14,$F23,\"\")",
+   null
+  ],
+  "O24": [
+   "=IF($D24=O$14,$F24,\"\")",
+   null
+  ],
+  "O25": [
+   "=IF($D25=O$14,$F25,\"\")",
+   null
+  ],
+  "O26": [
+   "=IF($D26=O$14,$F26,\"\")",
+   null
+  ],
+  "O27": [
+   "=IF($D27=O$14,$F27,\"\")",
+   null
+  ],
+  "O28": [
+   "=IF($D28=O$14,$F28,\"\")",
+   null
+  ],
+  "O29": [
+   "=IF($D29=O$14,$F29,\"\")",
+   null
+  ],
+  "O30": [
+   "=SUM(O15:O29)",
+   0
+  ],
+  "O37": [
+   "USD$",
+   "USD$"
+  ],
+  "O38": [
+   "=IFERROR(VLOOKUP(N8,'Per Diem (USD$)'!B5:G11,6,FALSE),100)",
+   100
+  ],
+  "O39": [
+   "=ROUND(O38*0.5,1)",
+   50
+  ],
+  "P14": [
+   "Parking",
+   "Parking"
+  ],
+  "P15": [
+   "=IF($D15=P$14,$F15,\"\")",
+   null
+  ],
+  "P16": [
+   "=IF($D16=P$14,$F16,\"\")",
+   null
+  ],
+  "P17": [
+   "=IF($D17=P$14,$F17,\"\")",
+   null
+  ],
+  "P18": [
+   "=IF($D18=P$14,$F18,\"\")",
+   null
+  ],
+  "P19": [
+   "=IF($D19=P$14,$F19,\"\")",
+   null
+  ],
+  "P20": [
+   "=IF($D20=P$14,$F20,\"\")",
+   null
+  ],
+  "P21": [
+   "=IF($D21=P$14,$F21,\"\")",
+   null
+  ],
+  "P22": [
+   "=IF($D22=P$14,$F22,\"\")",
+   null
+  ],
+  "P23": [
+   "=IF($D23=P$14,$F23,\"\")",
+   null
+  ],
+  "P24": [
+   "=IF($D24=P$14,$F24,\"\")",
+   null
+  ],
+  "P25": [
+   "=IF($D25=P$14,$F25,\"\")",
+   null
+  ],
+  "P26": [
+   "=IF($D26=P$14,$F26,\"\")",
+   null
+  ],
+  "P27": [
+   "=IF($D27=P$14,$F27,\"\")",
+   null
+  ],
+  "P28": [
+   "=IF($D28=P$14,$F28,\"\")",
+   null
+  ],
+  "P29": [
+   "=IF($D29=P$14,$F29,\"\")",
+   null
+  ],
+  "P30": [
+   "=SUM(P15:P29)",
+   0
+  ],
+  "P37": [
+   "Local Currency",
+   "Local Currency"
+  ],
+  "P38": [
+   "=VLOOKUP(N8,'Per Diem (Mixed Currency)'!B5:H14,7,FALSE)",
+   100
+  ],
+  "P39": [
+   "=ROUND(P38*0.5,1)",
+   50
+  ],
+  "Q14": [
+   "Taxi",
+   "Taxi"
+  ],
+  "Q15": [
+   "=IF($D15=Q$14,$F15,\"\")",
+   null
+  ],
+  "Q16": [
+   "=IF($D16=Q$14,$F16,\"\")",
+   null
+  ],
+  "Q17": [
+   "=IF($D17=Q$14,$F17,\"\")",
+   null
+  ],
+  "Q18": [
+   "=IF($D18=Q$14,$F18,\"\")",
+   null
+  ],
+  "Q19": [
+   "=IF($D19=Q$14,$F19,\"\")",
+   null
+  ],
+  "Q20": [
+   "=IF($D20=Q$14,$F20,\"\")",
+   null
+  ],
+  "Q21": [
+   "=IF($D21=Q$14,$F21,\"\")",
+   null
+  ],
+  "Q22": [
+   "=IF($D22=Q$14,$F22,\"\")",
+   null
+  ],
+  "Q23": [
+   "=IF($D23=Q$14,$F23,\"\")",
+   null
+  ],
+  "Q24": [
+   "=IF($D24=Q$14,$F24,\"\")",
+   null
+  ],
+  "Q25": [
+   "=IF($D25=Q$14,$F25,\"\")",
+   null
+  ],
+  "Q26": [
+   "=IF($D26=Q$14,$F26,\"\")",
+   null
+  ],
+  "Q27": [
+   "=IF($D27=Q$14,$F27,\"\")",
+   null
+  ],
+  "Q28": [
+   "=IF($D28=Q$14,$F28,\"\")",
+   null
+  ],
+  "Q29": [
+   "=IF($D29=Q$14,$F29,\"\")",
+   null
+  ],
+  "Q30": [
+   "=SUM(Q15:Q29)",
+   0
+  ],
+  "R14": [
+   "Fuel",
+   "Fuel"
+  ],
+  "R15": [
+   "=IF($D15=R$14,$F15,\"\")",
+   null
+  ],
+  "R16": [
+   "=IF($D16=R$14,$F16,\"\")",
+   null
+  ],
+  "R17": [
+   "=IF($D17=R$14,$F17,\"\")",
+   null
+  ],
+  "R18": [
+   "=IF($D18=R$14,$F18,\"\")",
+   null
+  ],
+  "R19": [
+   "=IF($D19=R$14,$F19,\"\")",
+   null
+  ],
+  "R20": [
+   "=IF($D20=R$14,$F20,\"\")",
+   null
+  ],
+  "R21": [
+   "=IF($D21=R$14,$F21,\"\")",
+   null
+  ],
+  "R22": [
+   "=IF($D22=R$14,$F22,\"\")",
+   null
+  ],
+  "R23": [
+   "=IF($D23=R$14,$F23,\"\")",
+   null
+  ],
+  "R24": [
+   "=IF($D24=R$14,$F24,\"\")",
+   null
+  ],
+  "R25": [
+   "=IF($D25=R$14,$F25,\"\")",
+   null
+  ],
+  "R26": [
+   "=IF($D26=R$14,$F26,\"\")",
+   null
+  ],
+  "R27": [
+   "=IF($D27=R$14,$F27,\"\")",
+   null
+  ],
+  "R28": [
+   "=IF($D28=R$14,$F28,\"\")",
+   null
+  ],
+  "R29": [
+   "=IF($D29=R$14,$F29,\"\")",
+   null
+  ],
+  "S14": [
+   "Mileage (@.55/M, .50/KM)",
+   "Mileage (@.55/M, .50/KM)"
+  ],
+  "S15": [
+   "=IF($D15=S$14,$F15,\"\")",
+   null
+  ],
+  "S16": [
+   "=IF($D16=S$14,$F16,\"\")",
+   null
+  ],
+  "S17": [
+   "=IF($D17=S$14,$F17,\"\")",
+   null
+  ],
+  "S18": [
+   "=IF($D18=S$14,$F18,\"\")",
+   null
+  ],
+  "S19": [
+   "=IF($D19=S$14,$F19,\"\")",
+   null
+  ],
+  "S20": [
+   "=IF($D20=S$14,$F20,\"\")",
+   null
+  ],
+  "S21": [
+   "=IF($D21=S$14,$F21,\"\")",
+   null
+  ],
+  "S22": [
+   "=IF($D22=S$14,$F22,\"\")",
+   null
+  ],
+  "S23": [
+   "=IF($D23=S$14,$F23,\"\")",
+   null
+  ],
+  "S24": [
+   "=IF($D24=S$14,$F24,\"\")",
+   null
+  ],
+  "S25": [
+   "=IF($D25=S$14,$F25,\"\")",
+   null
+  ],
+  "S26": [
+   "=IF($D26=S$14,$F26,\"\")",
+   null
+  ],
+  "S27": [
+   "=IF($D27=S$14,$F27,\"\")",
+   null
+  ],
+  "S28": [
+   "=IF($D28=S$14,$F28,\"\")",
+   null
+  ],
+  "S29": [
+   "=IF($D29=S$14,$F29,\"\")",
+   null
+  ],
+  "S30": [
+   "=SUM(S15:S29)",
+   0
+  ],
+  "S31": [
+   "Subtotal",
+   "Subtotal"
+  ],
+  "S32": [
+   "Advances",
+   "Advances"
+  ],
+  "S33": [
+   "Total",
+   "Total"
+  ],
+  "S37": [
+   "Signature",
+   "Signature"
+  ],
+  "S39": [
+   "Approved",
+   "Approved"
+  ],
+  "S41": [
+   "Date",
+   "Date"
+  ],
+  "T14": [
+   "Other",
+   "Other"
+  ],
+  "T15": [
+   "=IF($D15=T$14,$F15,\"\")",
+   null
+  ],
+  "T16": [
+   "=IF($D16=T$14,$F16,\"\")",
+   null
+  ],
+  "T17": [
+   "=IF($D17=T$14,$F17,\"\")",
+   null
+  ],
+  "T18": [
+   "=IF($D18=T$14,$F18,\"\")",
+   null
+  ],
+  "T19": [
+   "=IF($D19=T$14,$F19,\"\")",
+   null
+  ],
+  "T20": [
+   "=IF($D20=T$14,$F20,\"\")",
+   null
+  ],
+  "T21": [
+   "=IF($D21=T$14,$F21,\"\")",
+   null
+  ],
+  "T22": [
+   "=IF($D22=T$14,$F22,\"\")",
+   null
+  ],
+  "T23": [
+   "=IF($D23=T$14,$F23,\"\")",
+   null
+  ],
+  "T24": [
+   "=IF($D24=T$14,$F24,\"\")",
+   null
+  ],
+  "T25": [
+   "=IF($D25=T$14,$F25,\"\")",
+   null
+  ],
+  "T26": [
+   "=IF($D26=T$14,$F26,\"\")",
+   null
+  ],
+  "T27": [
+   "=IF($D27=T$14,$F27,\"\")",
+   null
+  ],
+  "T28": [
+   "=IF($D28=T$14,$F28,\"\")",
+   null
+  ],
+  "T29": [
+   "=IF($D29=T$14,$F29,\"\")",
+   null
+  ],
+  "T30": [
+   "=SUM(T15:T29)",
+   0
+  ],
+  "U14": [
+   "Total",
+   "Total"
+  ],
+  "U15": [
+   "=SUM(G15:T15)",
+   50
+  ],
+  "U16": [
+   "=SUM(G16:T16)",
+   100
+  ],
+  "U17": [
+   "=SUM(G17:T17)",
+   100
+  ],
+  "U18": [
+   "=SUM(G18:T18)",
+   100
+  ],
+  "U19": [
+   "=SUM(G19:T19)",
+   100
+  ],
+  "U20": [
+   "=SUM(G20:T20)",
+   100
+  ],
+  "U21": [
+   "=SUM(G21:T21)",
+   0
+  ],
+  "U22": [
+   "=SUM(G22:T22)",
+   0
+  ],
+  "U23": [
+   "=SUM(G23:T23)",
+   0
+  ],
+  "U24": [
+   "=SUM(G24:T24)",
+   0
+  ],
+  "U25": [
+   "=SUM(G25:T25)",
+   0
+  ],
+  "U26": [
+   "=SUM(G26:T26)",
+   0
+  ],
+  "U27": [
+   "=SUM(G27:T27)",
+   0
+  ],
+  "U28": [
+   "=SUM(G28:T28)",
+   0
+  ],
+  "U29": [
+   "=SUM(G29:T29)",
+   0
+  ],
+  "U31": [
+   "=SUM(U15:U29)",
+   550
+  ],
+  "U33": [
+   "=(U31-U32)",
+   550
+  ],
+  "V13": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "V14": [
+   "HST",
+   "HST"
+  ],
+  "V15": [
+   0,
+   0
+  ],
+  "V16": [
+   0,
+   0
+  ],
+  "V17": [
+   0,
+   0
+  ],
+  "V18": [
+   0,
+   0
+  ],
+  "V19": [
+   0,
+   0
+  ],
+  "V20": [
+   0,
+   0
+  ],
+  "V21": [
+   0,
+   0
+  ],
+  "V22": [
+   0,
+   0
+  ],
+  "V23": [
+   0,
+   0
+  ],
+  "V24": [
+   0,
+   0
+  ],
+  "V25": [
+   0,
+   0
+  ],
+  "V26": [
+   0,
+   0
+  ],
+  "V27": [
+   0,
+   0
+  ],
+  "V28": [
+   0,
+   0
+  ],
+  "V29": [
+   0,
+   0
+  ],
+  "V31": [
+   "=SUM(V15:V29)",
+   0
+  ],
+  "W14": [
+   "Net of HST",
+   "Net of HST"
+  ],
+  "W15": [
+   "=+U15-V15",
+   50
+  ],
+  "W16": [
+   "=+U16-V16",
+   100
+  ],
+  "W17": [
+   "=+U17-V17",
+   100
+  ],
+  "W18": [
+   "=+U18-V18",
+   100
+  ],
+  "W19": [
+   "=+U19-V19",
+   100
+  ],
+  "W20": [
+   "=+U20-V20",
+   100
+  ],
+  "W21": [
+   "=+U21-V21",
+   0
+  ],
+  "W22": [
+   "=+U22-V22",
+   0
+  ],
+  "W23": [
+   "=+U23-V23",
+   0
+  ],
+  "W24": [
+   "=+U24-V24",
+   0
+  ],
+  "W25": [
+   "=+U25-V25",
+   0
+  ],
+  "W26": [
+   "=+U26-V26",
+   0
+  ],
+  "W27": [
+   "=+U27-V27",
+   0
+  ],
+  "W28": [
+   "=+U28-V28",
+   0
+  ],
+  "W29": [
+   "=+U29-V29",
+   0
+  ],
+  "W31": [
+   "=SUM(W15:W29)",
+   550
+  ]
+ },
+ "Week Ending 27-Jun-26": {
+  "A2": [
+   "evertz",
+   "evertz"
+  ],
+  "B14": [
+   "Receipt #",
+   "Receipt #"
+  ],
+  "B31": [
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order.",
+   "Please indicate receipt number on actual receipt, for proper referencing, and list in chronological order."
+  ],
+  "B33": [
+   "*Please report one currency per report.",
+   "*Please report one currency per report."
+  ],
+  "B37": [
+   "A/C",
+   "A/C"
+  ],
+  "B38": [
+   "A/C",
+   "A/C"
+  ],
+  "B39": [
+   "A/C",
+   "A/C"
+  ],
+  "B40": [
+   "A/C",
+   "A/C"
+  ],
+  "B41": [
+   "A/C",
+   "A/C"
+  ],
+  "C14": [
+   "Date",
+   "Date"
+  ],
+  "C15": [
+   "2026-06-21",
+   "2026-06-21"
+  ],
+  "C16": [
+   "2026-06-22",
+   "2026-06-22"
+  ],
+  "C17": [
+   "2026-06-23",
+   "2026-06-23"
+  ],
+  "C18": [
+   "2026-06-24",
+   "2026-06-24"
+  ],
+  "C19": [
+   "2026-06-25",
+   "2026-06-25"
+  ],
+  "C20": [
+   "2026-06-26",
+   "2026-06-26"
+  ],
+  "C21": [
+   "2026-06-27",
+   "2026-06-27"
+  ],
+  "C35": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "D14": [
+   "Description",
+   "Description"
+  ],
+  "D15": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D16": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D17": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D18": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D19": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D20": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "D21": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "E14": [
+   "Currency*",
+   "Currency*"
+  ],
+  "E15": [
+   "USD",
+   "USD"
+  ],
+  "E16": [
+   "USD",
+   "USD"
+  ],
+  "E17": [
+   "USD",
+   "USD"
+  ],
+  "E18": [
+   "USD",
+   "USD"
+  ],
+  "E19": [
+   "USD",
+   "USD"
+  ],
+  "E20": [
+   "USD",
+   "USD"
+  ],
+  "E21": [
+   "USD",
+   "USD"
+  ],
+  "E37": [
+   "Amount",
+   "Amount"
+  ],
+  "E38": [
+   "Amount",
+   "Amount"
+  ],
+  "E39": [
+   "Amount",
+   "Amount"
+  ],
+  "E40": [
+   "Amount",
+   "Amount"
+  ],
+  "E41": [
+   "Amount",
+   "Amount"
+  ],
+  "F14": [
+   "Amount",
+   "Amount"
+  ],
+  "F2": [
+   "TRAVEL EXPENSE REPORT",
+   "TRAVEL EXPENSE REPORT"
+  ],
+  "G14": [
+   "Airfare / Train",
+   "Airfare / Train"
+  ],
+  "G15": [
+   "=IF($D15=G$14,$F15,\"\")",
+   null
+  ],
+  "G16": [
+   "=IF($D16=G$14,$F16,\"\")",
+   null
+  ],
+  "G17": [
+   "=IF($D17=G$14,$F17,\"\")",
+   null
+  ],
+  "G18": [
+   "=IF($D18=G$14,$F18,\"\")",
+   null
+  ],
+  "G19": [
+   "=IF($D19=G$14,$F19,\"\")",
+   null
+  ],
+  "G20": [
+   "=IF($D20=G$14,$F20,\"\")",
+   null
+  ],
+  "G21": [
+   "=IF($D21=G$14,$F21,\"\")",
+   null
+  ],
+  "G22": [
+   "=IF($D22=G$14,$F22,\"\")",
+   null
+  ],
+  "G23": [
+   "=IF($D23=G$14,$F23,\"\")",
+   null
+  ],
+  "G24": [
+   "=IF($D24=G$14,$F24,\"\")",
+   null
+  ],
+  "G25": [
+   "=IF($D25=G$14,$F25,\"\")",
+   null
+  ],
+  "G26": [
+   "=IF($D26=G$14,$F26,\"\")",
+   null
+  ],
+  "G27": [
+   "=IF($D27=G$14,$F27,\"\")",
+   null
+  ],
+  "G28": [
+   "=IF($D28=G$14,$F28,\"\")",
+   null
+  ],
+  "G29": [
+   "=IF($D29=G$14,$F29,\"\")",
+   null
+  ],
+  "G30": [
+   "=SUM(G15:G29)",
+   0
+  ],
+  "H14": [
+   "Breakfast",
+   "Breakfast"
+  ],
+  "H15": [
+   "=IF($D15=H$14,$F15,\"\")",
+   null
+  ],
+  "H16": [
+   "=IF($D16=H$14,$F16,\"\")",
+   null
+  ],
+  "H17": [
+   "=IF($D17=H$14,$F17,\"\")",
+   null
+  ],
+  "H18": [
+   "=IF($D18=H$14,$F18,\"\")",
+   null
+  ],
+  "H19": [
+   "=IF($D19=H$14,$F19,\"\")",
+   null
+  ],
+  "H20": [
+   "=IF($D20=H$14,$F20,\"\")",
+   null
+  ],
+  "H21": [
+   "=IF($D21=H$14,$F21,\"\")",
+   null
+  ],
+  "H22": [
+   "=IF($D22=H$14,$F22,\"\")",
+   null
+  ],
+  "H23": [
+   "=IF($D23=H$14,$F23,\"\")",
+   null
+  ],
+  "H24": [
+   "=IF($D24=H$14,$F24,\"\")",
+   null
+  ],
+  "H25": [
+   "=IF($D25=H$14,$F25,\"\")",
+   null
+  ],
+  "H26": [
+   "=IF($D26=H$14,$F26,\"\")",
+   null
+  ],
+  "H27": [
+   "=IF($D27=H$14,$F27,\"\")",
+   null
+  ],
+  "H28": [
+   "=IF($D28=H$14,$F28,\"\")",
+   null
+  ],
+  "H29": [
+   "=IF($D29=H$14,$F29,\"\")",
+   null
+  ],
+  "H30": [
+   "=SUM(H15:H29)",
+   0
+  ],
+  "H37": [
+   "P.J.",
+   "P.J."
+  ],
+  "H39": [
+   "Cheque #",
+   "Cheque #"
+  ],
+  "H41": [
+   "Date Paid",
+   "Date Paid"
+  ],
+  "I14": [
+   "Lunch",
+   "Lunch"
+  ],
+  "I15": [
+   "=IF($D15=I$14,$F15,\"\")",
+   null
+  ],
+  "I16": [
+   "=IF($D16=I$14,$F16,\"\")",
+   null
+  ],
+  "I17": [
+   "=IF($D17=I$14,$F17,\"\")",
+   null
+  ],
+  "I18": [
+   "=IF($D18=I$14,$F18,\"\")",
+   null
+  ],
+  "I19": [
+   "=IF($D19=I$14,$F19,\"\")",
+   null
+  ],
+  "I20": [
+   "=IF($D20=I$14,$F20,\"\")",
+   null
+  ],
+  "I21": [
+   "=IF($D21=I$14,$F21,\"\")",
+   null
+  ],
+  "I22": [
+   "=IF($D22=I$14,$F22,\"\")",
+   null
+  ],
+  "I23": [
+   "=IF($D23=I$14,$F23,\"\")",
+   null
+  ],
+  "I24": [
+   "=IF($D24=I$14,$F24,\"\")",
+   null
+  ],
+  "I25": [
+   "=IF($D25=I$14,$F25,\"\")",
+   null
+  ],
+  "I26": [
+   "=IF($D26=I$14,$F26,\"\")",
+   null
+  ],
+  "I27": [
+   "=IF($D27=I$14,$F27,\"\")",
+   null
+  ],
+  "I28": [
+   "=IF($D28=I$14,$F28,\"\")",
+   null
+  ],
+  "I29": [
+   "=IF($D29=I$14,$F29,\"\")",
+   null
+  ],
+  "I30": [
+   "=SUM(I15:I29)",
+   0
+  ],
+  "J14": [
+   "Dinner",
+   "Dinner"
+  ],
+  "J15": [
+   "=IF($D15=J$14,$F15,\"\")",
+   null
+  ],
+  "J16": [
+   "=IF($D16=J$14,$F16,\"\")",
+   null
+  ],
+  "J17": [
+   "=IF($D17=J$14,$F17,\"\")",
+   null
+  ],
+  "J18": [
+   "=IF($D18=J$14,$F18,\"\")",
+   null
+  ],
+  "J19": [
+   "=IF($D19=J$14,$F19,\"\")",
+   null
+  ],
+  "J20": [
+   "=IF($D20=J$14,$F20,\"\")",
+   null
+  ],
+  "J21": [
+   "=IF($D21=J$14,$F21,\"\")",
+   null
+  ],
+  "J22": [
+   "=IF($D22=J$14,$F22,\"\")",
+   null
+  ],
+  "J23": [
+   "=IF($D23=J$14,$F23,\"\")",
+   null
+  ],
+  "J24": [
+   "=IF($D24=J$14,$F24,\"\")",
+   null
+  ],
+  "J25": [
+   "=IF($D25=J$14,$F25,\"\")",
+   null
+  ],
+  "J26": [
+   "=IF($D26=J$14,$F26,\"\")",
+   null
+  ],
+  "J27": [
+   "=IF($D27=J$14,$F27,\"\")",
+   null
+  ],
+  "J28": [
+   "=IF($D28=J$14,$F28,\"\")",
+   null
+  ],
+  "J29": [
+   "=IF($D29=J$14,$F29,\"\")",
+   null
+  ],
+  "J30": [
+   "=SUM(J15:J29)",
+   0
+  ],
+  "K14": [
+   "Late Meal / Overtime",
+   "Late Meal / Overtime"
+  ],
+  "K15": [
+   "=IF($D15=K$14,$F15,\"\")",
+   null
+  ],
+  "K16": [
+   "=IF($D16=K$14,$F16,\"\")",
+   null
+  ],
+  "K17": [
+   "=IF($D17=K$14,$F17,\"\")",
+   null
+  ],
+  "K18": [
+   "=IF($D18=K$14,$F18,\"\")",
+   null
+  ],
+  "K19": [
+   "=IF($D19=K$14,$F19,\"\")",
+   null
+  ],
+  "K20": [
+   "=IF($D20=K$14,$F20,\"\")",
+   null
+  ],
+  "K21": [
+   "=IF($D21=K$14,$F21,\"\")",
+   null
+  ],
+  "K22": [
+   "=IF($D22=K$14,$F22,\"\")",
+   null
+  ],
+  "K23": [
+   "=IF($D23=K$14,$F23,\"\")",
+   null
+  ],
+  "K24": [
+   "=IF($D24=K$14,$F24,\"\")",
+   null
+  ],
+  "K25": [
+   "=IF($D25=K$14,$F25,\"\")",
+   null
+  ],
+  "K26": [
+   "=IF($D26=K$14,$F26,\"\")",
+   null
+  ],
+  "K27": [
+   "=IF($D27=K$14,$F27,\"\")",
+   null
+  ],
+  "K28": [
+   "=IF($D28=K$14,$F28,\"\")",
+   null
+  ],
+  "K29": [
+   "=IF($D29=K$14,$F29,\"\")",
+   null
+  ],
+  "K30": [
+   "=SUM(K15:K29)",
+   0
+  ],
+  "L10": [
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED",
+   "YOUR ADDRESS (ONLY INDICATE IF CHANGED"
+  ],
+  "L11": [
+   "SINCE LAST EXPENSE)",
+   "SINCE LAST EXPENSE)"
+  ],
+  "L14": [
+   "Per Diem",
+   "Per Diem"
+  ],
+  "L15": [
+   100,
+   100
+  ],
+  "L16": [
+   100,
+   100
+  ],
+  "L17": [
+   100,
+   100
+  ],
+  "L18": [
+   100,
+   100
+  ],
+  "L19": [
+   100,
+   100
+  ],
+  "L20": [
+   100,
+   100
+  ],
+  "L21": [
+   100,
+   100
+  ],
+  "L22": [
+   "=IF(OR($D22='Expense Descriptions'!$A$2,$D22='Expense Descriptions'!$A$3),$F22,\"\")",
+   null
+  ],
+  "L23": [
+   "=IF(OR($D23='Expense Descriptions'!$A$2,$D23='Expense Descriptions'!$A$3),$F23,\"\")",
+   null
+  ],
+  "L24": [
+   "=IF(OR($D24='Expense Descriptions'!$A$2,$D24='Expense Descriptions'!$A$3),$F24,\"\")",
+   null
+  ],
+  "L25": [
+   "=IF(OR($D25='Expense Descriptions'!$A$2,$D25='Expense Descriptions'!$A$3),$F25,\"\")",
+   null
+  ],
+  "L26": [
+   "=IF(OR($D26='Expense Descriptions'!$A$2,$D26='Expense Descriptions'!$A$3),$F26,\"\")",
+   null
+  ],
+  "L27": [
+   "=IF(OR($D27='Expense Descriptions'!$A$2,$D27='Expense Descriptions'!$A$3),$F27,\"\")",
+   null
+  ],
+  "L28": [
+   "=IF(OR($D28='Expense Descriptions'!$A$2,$D28='Expense Descriptions'!$A$3),$F28,\"\")",
+   null
+  ],
+  "L29": [
+   "=IF(OR($D29='Expense Descriptions'!$A$2,$D29='Expense Descriptions'!$A$3),$F29,\"\")",
+   null
+  ],
+  "L30": [
+   "=SUM(L15:L29)",
+   700
+  ],
+  "L4": [
+   "WEEK ENDING",
+   "WEEK ENDING"
+  ],
+  "L5": [
+   "NAME",
+   "NAME"
+  ],
+  "L6": [
+   "DEPARTMENT",
+   "DEPARTMENT"
+  ],
+  "L7": [
+   "CUSTOMER TRIP",
+   "CUSTOMER TRIP"
+  ],
+  "L8": [
+   "TRIP DESTINATION",
+   "TRIP DESTINATION"
+  ],
+  "M14": [
+   "Incidentals",
+   "Incidentals"
+  ],
+  "M15": [
+   "=IF($D15=M$14,$F15,\"\")",
+   null
+  ],
+  "M16": [
+   "=IF($D16=M$14,$F16,\"\")",
+   null
+  ],
+  "M17": [
+   "=IF($D17=M$14,$F17,\"\")",
+   null
+  ],
+  "M18": [
+   "=IF($D18=M$14,$F18,\"\")",
+   null
+  ],
+  "M19": [
+   "=IF($D19=M$14,$F19,\"\")",
+   null
+  ],
+  "M20": [
+   "=IF($D20=M$14,$F20,\"\")",
+   null
+  ],
+  "M21": [
+   "=IF($D21=M$14,$F21,\"\")",
+   null
+  ],
+  "M22": [
+   "=IF($D22=M$14,$F22,\"\")",
+   null
+  ],
+  "M23": [
+   "=IF($D23=M$14,$F23,\"\")",
+   null
+  ],
+  "M24": [
+   "=IF($D24=M$14,$F24,\"\")",
+   null
+  ],
+  "M25": [
+   "=IF($D25=M$14,$F25,\"\")",
+   null
+  ],
+  "M26": [
+   "=IF($D26=M$14,$F26,\"\")",
+   null
+  ],
+  "M27": [
+   "=IF($D27=M$14,$F27,\"\")",
+   null
+  ],
+  "M28": [
+   "=IF($D28=M$14,$F28,\"\")",
+   null
+  ],
+  "M29": [
+   "=IF($D29=M$14,$F29,\"\")",
+   null
+  ],
+  "M30": [
+   "=SUM(M15:M29)",
+   0
+  ],
+  "M35": [
+   "Per Diem Calculator\n(based on above noted Trip Destination)",
+   "Per Diem Calculator\n(based on above noted Trip Destination)"
+  ],
+  "M38": [
+   "Per Diam - Full Day",
+   "Per Diam - Full Day"
+  ],
+  "M39": [
+   "Per Diam - Partial Day",
+   "Per Diam - Partial Day"
+  ],
+  "N14": [
+   "Hotel",
+   "Hotel"
+  ],
+  "N15": [
+   "=IF($D15=N$14,$F15,\"\")",
+   null
+  ],
+  "N16": [
+   "=IF($D16=N$14,$F16,\"\")",
+   null
+  ],
+  "N17": [
+   "=IF($D17=N$14,$F17,\"\")",
+   null
+  ],
+  "N18": [
+   "=IF($D18=N$14,$F18,\"\")",
+   null
+  ],
+  "N19": [
+   "=IF($D19=N$14,$F19,\"\")",
+   null
+  ],
+  "N20": [
+   "=IF($D20=N$14,$F20,\"\")",
+   null
+  ],
+  "N21": [
+   "=IF($D21=N$14,$F21,\"\")",
+   null
+  ],
+  "N22": [
+   "=IF($D22=N$14,$F22,\"\")",
+   null
+  ],
+  "N23": [
+   "=IF($D23=N$14,$F23,\"\")",
+   null
+  ],
+  "N24": [
+   "=IF($D24=N$14,$F24,\"\")",
+   null
+  ],
+  "N25": [
+   "=IF($D25=N$14,$F25,\"\")",
+   null
+  ],
+  "N26": [
+   "=IF($D26=N$14,$F26,\"\")",
+   null
+  ],
+  "N27": [
+   "=IF($D27=N$14,$F27,\"\")",
+   null
+  ],
+  "N28": [
+   "=IF($D28=N$14,$F28,\"\")",
+   null
+  ],
+  "N29": [
+   "=IF($D29=N$14,$F29,\"\")",
+   null
+  ],
+  "N30": [
+   "=SUM(N15:N29)",
+   0
+  ],
+  "N4": [
+   "2026-06-27",
+   "2026-06-27"
+  ],
+  "N5": [
+   "Jamie Chen",
+   "Jamie Chen"
+  ],
+  "N6": [
+   "Service",
+   "Service"
+  ],
+  "N7": [
+   "Northwind Studios",
+   "Northwind Studios"
+  ],
+  "N8": [
+   "United States",
+   "United States"
+  ],
+  "O14": [
+   "Auto Rental",
+   "Auto Rental"
+  ],
+  "O15": [
+   "=IF($D15=O$14,$F15,\"\")",
+   null
+  ],
+  "O16": [
+   "=IF($D16=O$14,$F16,\"\")",
+   null
+  ],
+  "O17": [
+   "=IF($D17=O$14,$F17,\"\")",
+   null
+  ],
+  "O18": [
+   "=IF($D18=O$14,$F18,\"\")",
+   null
+  ],
+  "O19": [
+   "=IF($D19=O$14,$F19,\"\")",
+   null
+  ],
+  "O20": [
+   "=IF($D20=O$14,$F20,\"\")",
+   null
+  ],
+  "O21": [
+   "=IF($D21=O$14,$F21,\"\")",
+   null
+  ],
+  "O22": [
+   "=IF($D22=O$14,$F22,\"\")",
+   null
+  ],
+  "O23": [
+   "=IF($D23=O$14,$F23,\"\")",
+   null
+  ],
+  "O24": [
+   "=IF($D24=O$14,$F24,\"\")",
+   null
+  ],
+  "O25": [
+   "=IF($D25=O$14,$F25,\"\")",
+   null
+  ],
+  "O26": [
+   "=IF($D26=O$14,$F26,\"\")",
+   null
+  ],
+  "O27": [
+   "=IF($D27=O$14,$F27,\"\")",
+   null
+  ],
+  "O28": [
+   "=IF($D28=O$14,$F28,\"\")",
+   null
+  ],
+  "O29": [
+   "=IF($D29=O$14,$F29,\"\")",
+   null
+  ],
+  "O30": [
+   "=SUM(O15:O29)",
+   0
+  ],
+  "O37": [
+   "USD$",
+   "USD$"
+  ],
+  "O38": [
+   "=IFERROR(VLOOKUP(N8,'Per Diem (USD$)'!B5:G11,6,FALSE),100)",
+   100
+  ],
+  "O39": [
+   "=ROUND(O38*0.5,1)",
+   50
+  ],
+  "P14": [
+   "Parking",
+   "Parking"
+  ],
+  "P15": [
+   "=IF($D15=P$14,$F15,\"\")",
+   null
+  ],
+  "P16": [
+   "=IF($D16=P$14,$F16,\"\")",
+   null
+  ],
+  "P17": [
+   "=IF($D17=P$14,$F17,\"\")",
+   null
+  ],
+  "P18": [
+   "=IF($D18=P$14,$F18,\"\")",
+   null
+  ],
+  "P19": [
+   "=IF($D19=P$14,$F19,\"\")",
+   null
+  ],
+  "P20": [
+   "=IF($D20=P$14,$F20,\"\")",
+   null
+  ],
+  "P21": [
+   "=IF($D21=P$14,$F21,\"\")",
+   null
+  ],
+  "P22": [
+   "=IF($D22=P$14,$F22,\"\")",
+   null
+  ],
+  "P23": [
+   "=IF($D23=P$14,$F23,\"\")",
+   null
+  ],
+  "P24": [
+   "=IF($D24=P$14,$F24,\"\")",
+   null
+  ],
+  "P25": [
+   "=IF($D25=P$14,$F25,\"\")",
+   null
+  ],
+  "P26": [
+   "=IF($D26=P$14,$F26,\"\")",
+   null
+  ],
+  "P27": [
+   "=IF($D27=P$14,$F27,\"\")",
+   null
+  ],
+  "P28": [
+   "=IF($D28=P$14,$F28,\"\")",
+   null
+  ],
+  "P29": [
+   "=IF($D29=P$14,$F29,\"\")",
+   null
+  ],
+  "P30": [
+   "=SUM(P15:P29)",
+   0
+  ],
+  "P37": [
+   "Local Currency",
+   "Local Currency"
+  ],
+  "P38": [
+   "=VLOOKUP(N8,'Per Diem (Mixed Currency)'!B5:H14,7,FALSE)",
+   100
+  ],
+  "P39": [
+   "=ROUND(P38*0.5,1)",
+   50
+  ],
+  "Q14": [
+   "Taxi",
+   "Taxi"
+  ],
+  "Q15": [
+   "=IF($D15=Q$14,$F15,\"\")",
+   null
+  ],
+  "Q16": [
+   "=IF($D16=Q$14,$F16,\"\")",
+   null
+  ],
+  "Q17": [
+   "=IF($D17=Q$14,$F17,\"\")",
+   null
+  ],
+  "Q18": [
+   "=IF($D18=Q$14,$F18,\"\")",
+   null
+  ],
+  "Q19": [
+   "=IF($D19=Q$14,$F19,\"\")",
+   null
+  ],
+  "Q20": [
+   "=IF($D20=Q$14,$F20,\"\")",
+   null
+  ],
+  "Q21": [
+   "=IF($D21=Q$14,$F21,\"\")",
+   null
+  ],
+  "Q22": [
+   "=IF($D22=Q$14,$F22,\"\")",
+   null
+  ],
+  "Q23": [
+   "=IF($D23=Q$14,$F23,\"\")",
+   null
+  ],
+  "Q24": [
+   "=IF($D24=Q$14,$F24,\"\")",
+   null
+  ],
+  "Q25": [
+   "=IF($D25=Q$14,$F25,\"\")",
+   null
+  ],
+  "Q26": [
+   "=IF($D26=Q$14,$F26,\"\")",
+   null
+  ],
+  "Q27": [
+   "=IF($D27=Q$14,$F27,\"\")",
+   null
+  ],
+  "Q28": [
+   "=IF($D28=Q$14,$F28,\"\")",
+   null
+  ],
+  "Q29": [
+   "=IF($D29=Q$14,$F29,\"\")",
+   null
+  ],
+  "Q30": [
+   "=SUM(Q15:Q29)",
+   0
+  ],
+  "R14": [
+   "Fuel",
+   "Fuel"
+  ],
+  "R15": [
+   "=IF($D15=R$14,$F15,\"\")",
+   null
+  ],
+  "R16": [
+   "=IF($D16=R$14,$F16,\"\")",
+   null
+  ],
+  "R17": [
+   "=IF($D17=R$14,$F17,\"\")",
+   null
+  ],
+  "R18": [
+   "=IF($D18=R$14,$F18,\"\")",
+   null
+  ],
+  "R19": [
+   "=IF($D19=R$14,$F19,\"\")",
+   null
+  ],
+  "R20": [
+   "=IF($D20=R$14,$F20,\"\")",
+   null
+  ],
+  "R21": [
+   "=IF($D21=R$14,$F21,\"\")",
+   null
+  ],
+  "R22": [
+   "=IF($D22=R$14,$F22,\"\")",
+   null
+  ],
+  "R23": [
+   "=IF($D23=R$14,$F23,\"\")",
+   null
+  ],
+  "R24": [
+   "=IF($D24=R$14,$F24,\"\")",
+   null
+  ],
+  "R25": [
+   "=IF($D25=R$14,$F25,\"\")",
+   null
+  ],
+  "R26": [
+   "=IF($D26=R$14,$F26,\"\")",
+   null
+  ],
+  "R27": [
+   "=IF($D27=R$14,$F27,\"\")",
+   null
+  ],
+  "R28": [
+   "=IF($D28=R$14,$F28,\"\")",
+   null
+  ],
+  "R29": [
+   "=IF($D29=R$14,$F29,\"\")",
+   null
+  ],
+  "S14": [
+   "Mileage (@.55/M, .50/KM)",
+   "Mileage (@.55/M, .50/KM)"
+  ],
+  "S15": [
+   "=IF($D15=S$14,$F15,\"\")",
+   null
+  ],
+  "S16": [
+   "=IF($D16=S$14,$F16,\"\")",
+   null
+  ],
+  "S17": [
+   "=IF($D17=S$14,$F17,\"\")",
+   null
+  ],
+  "S18": [
+   "=IF($D18=S$14,$F18,\"\")",
+   null
+  ],
+  "S19": [
+   "=IF($D19=S$14,$F19,\"\")",
+   null
+  ],
+  "S20": [
+   "=IF($D20=S$14,$F20,\"\")",
+   null
+  ],
+  "S21": [
+   "=IF($D21=S$14,$F21,\"\")",
+   null
+  ],
+  "S22": [
+   "=IF($D22=S$14,$F22,\"\")",
+   null
+  ],
+  "S23": [
+   "=IF($D23=S$14,$F23,\"\")",
+   null
+  ],
+  "S24": [
+   "=IF($D24=S$14,$F24,\"\")",
+   null
+  ],
+  "S25": [
+   "=IF($D25=S$14,$F25,\"\")",
+   null
+  ],
+  "S26": [
+   "=IF($D26=S$14,$F26,\"\")",
+   null
+  ],
+  "S27": [
+   "=IF($D27=S$14,$F27,\"\")",
+   null
+  ],
+  "S28": [
+   "=IF($D28=S$14,$F28,\"\")",
+   null
+  ],
+  "S29": [
+   "=IF($D29=S$14,$F29,\"\")",
+   null
+  ],
+  "S30": [
+   "=SUM(S15:S29)",
+   0
+  ],
+  "S31": [
+   "Subtotal",
+   "Subtotal"
+  ],
+  "S32": [
+   "Advances",
+   "Advances"
+  ],
+  "S33": [
+   "Total",
+   "Total"
+  ],
+  "S37": [
+   "Signature",
+   "Signature"
+  ],
+  "S39": [
+   "Approved",
+   "Approved"
+  ],
+  "S41": [
+   "Date",
+   "Date"
+  ],
+  "T14": [
+   "Other",
+   "Other"
+  ],
+  "T15": [
+   "=IF($D15=T$14,$F15,\"\")",
+   null
+  ],
+  "T16": [
+   "=IF($D16=T$14,$F16,\"\")",
+   null
+  ],
+  "T17": [
+   "=IF($D17=T$14,$F17,\"\")",
+   null
+  ],
+  "T18": [
+   "=IF($D18=T$14,$F18,\"\")",
+   null
+  ],
+  "T19": [
+   "=IF($D19=T$14,$F19,\"\")",
+   null
+  ],
+  "T20": [
+   "=IF($D20=T$14,$F20,\"\")",
+   null
+  ],
+  "T21": [
+   "=IF($D21=T$14,$F21,\"\")",
+   null
+  ],
+  "T22": [
+   "=IF($D22=T$14,$F22,\"\")",
+   null
+  ],
+  "T23": [
+   "=IF($D23=T$14,$F23,\"\")",
+   null
+  ],
+  "T24": [
+   "=IF($D24=T$14,$F24,\"\")",
+   null
+  ],
+  "T25": [
+   "=IF($D25=T$14,$F25,\"\")",
+   null
+  ],
+  "T26": [
+   "=IF($D26=T$14,$F26,\"\")",
+   null
+  ],
+  "T27": [
+   "=IF($D27=T$14,$F27,\"\")",
+   null
+  ],
+  "T28": [
+   "=IF($D28=T$14,$F28,\"\")",
+   null
+  ],
+  "T29": [
+   "=IF($D29=T$14,$F29,\"\")",
+   null
+  ],
+  "T30": [
+   "=SUM(T15:T29)",
+   0
+  ],
+  "U14": [
+   "Total",
+   "Total"
+  ],
+  "U15": [
+   "=SUM(G15:T15)",
+   100
+  ],
+  "U16": [
+   "=SUM(G16:T16)",
+   100
+  ],
+  "U17": [
+   "=SUM(G17:T17)",
+   100
+  ],
+  "U18": [
+   "=SUM(G18:T18)",
+   100
+  ],
+  "U19": [
+   "=SUM(G19:T19)",
+   100
+  ],
+  "U20": [
+   "=SUM(G20:T20)",
+   100
+  ],
+  "U21": [
+   "=SUM(G21:T21)",
+   100
+  ],
+  "U22": [
+   "=SUM(G22:T22)",
+   0
+  ],
+  "U23": [
+   "=SUM(G23:T23)",
+   0
+  ],
+  "U24": [
+   "=SUM(G24:T24)",
+   0
+  ],
+  "U25": [
+   "=SUM(G25:T25)",
+   0
+  ],
+  "U26": [
+   "=SUM(G26:T26)",
+   0
+  ],
+  "U27": [
+   "=SUM(G27:T27)",
+   0
+  ],
+  "U28": [
+   "=SUM(G28:T28)",
+   0
+  ],
+  "U29": [
+   "=SUM(G29:T29)",
+   0
+  ],
+  "U31": [
+   "=SUM(U15:U29)",
+   700
+  ],
+  "U33": [
+   "=(U31-U32)",
+   700
+  ],
+  "V13": [
+   "Internal Use Only",
+   "Internal Use Only"
+  ],
+  "V14": [
+   "HST",
+   "HST"
+  ],
+  "V15": [
+   0,
+   0
+  ],
+  "V16": [
+   0,
+   0
+  ],
+  "V17": [
+   0,
+   0
+  ],
+  "V18": [
+   0,
+   0
+  ],
+  "V19": [
+   0,
+   0
+  ],
+  "V20": [
+   0,
+   0
+  ],
+  "V21": [
+   0,
+   0
+  ],
+  "V22": [
+   0,
+   0
+  ],
+  "V23": [
+   0,
+   0
+  ],
+  "V24": [
+   0,
+   0
+  ],
+  "V25": [
+   0,
+   0
+  ],
+  "V26": [
+   0,
+   0
+  ],
+  "V27": [
+   0,
+   0
+  ],
+  "V28": [
+   0,
+   0
+  ],
+  "V29": [
+   0,
+   0
+  ],
+  "V31": [
+   "=SUM(V15:V29)",
+   0
+  ],
+  "W14": [
+   "Net of HST",
+   "Net of HST"
+  ],
+  "W15": [
+   "=+U15-V15",
+   100
+  ],
+  "W16": [
+   "=+U16-V16",
+   100
+  ],
+  "W17": [
+   "=+U17-V17",
+   100
+  ],
+  "W18": [
+   "=+U18-V18",
+   100
+  ],
+  "W19": [
+   "=+U19-V19",
+   100
+  ],
+  "W20": [
+   "=+U20-V20",
+   100
+  ],
+  "W21": [
+   "=+U21-V21",
+   100
+  ],
+  "W22": [
+   "=+U22-V22",
+   0
+  ],
+  "W23": [
+   "=+U23-V23",
+   0
+  ],
+  "W24": [
+   "=+U24-V24",
+   0
+  ],
+  "W25": [
+   "=+U25-V25",
+   0
+  ],
+  "W26": [
+   "=+U26-V26",
+   0
+  ],
+  "W27": [
+   "=+U27-V27",
+   0
+  ],
+  "W28": [
+   "=+U28-V28",
+   0
+  ],
+  "W29": [
+   "=+U29-V29",
+   0
+  ],
+  "W31": [
+   "=SUM(W15:W29)",
+   700
+  ]
+ }
+}
