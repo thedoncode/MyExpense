@@ -9,7 +9,6 @@ MyExpense has two environments. Both are built from this repo; the branch decide
 | Build | `dist/prod/MyExpense.html` | `dist/qa/MyExpense-QA.html` |
 | Looks like | MyExpense | MyExpense with a yellow "QA environment · test data only" band and a QA tag |
 | Saved reports and receipts | Production's own database | QA's own database, completely separate |
-| On-device storage key (static hosting) | `expenseme` | `myexpense-qa` |
 
 Each Artifact has its own database, so nothing created in QA ever shows up in production, and the other way round. The Excel and PDF files QA produces are identical in format to production's; that is what QA is for.
 
@@ -21,10 +20,10 @@ Settings per environment live in [`environments.json`](../environments.json).
 2. **Build and test.**
    ```bash
    npm run build      # builds dist/prod and dist/qa
-   npm test           # sample reports vs. reference workbooks + LibreOffice recalculation
-   npm run test:e2e   # browser run-through, including the QA build
+   npm test           # template fidelity, snapshots and LibreOffice recalculation
+   npm run test:e2e   # browser run-through with several people, including the QA build
    ```
-3. **Publish to QA.** Update the QA Artifact with `dist/qa/MyExpense-QA.html`. In a Claude session, ask Claude to republish it to the QA link above.
+3. **Publish to QA.** Update the QA Artifact with `dist/qa/MyExpense-QA.html`, keeping its access rules. In a Claude session, ask Claude to republish it to the QA link above.
 4. **Check it in QA** on a phone: a per diem and an itemized report, a receipt photo, and every download.
 5. **Promote.** Merge `qa` into `main`, run `npm run build`, and update the production Artifact with `dist/prod/MyExpense.html`.
 
@@ -32,4 +31,6 @@ Never publish a QA build to the production link. The yellow band and the "MyExpe
 
 ## Access
 
-Both Artifacts start private to their owner. Share each one from its Share menu: production with everyone who files expenses, QA only with the people testing.
+Both Artifacts start private to their owner. Share each one from its Share menu: production with everyone who files expenses, QA only with the people testing. Give people Contributor ("can use") access, and Editor only to the people who maintain the app. [SECURITY.md](SECURITY.md#setting-up-sharing) explains why.
+
+Both Artifacts must be published with the access rules in [SECURITY.md](SECURITY.md#what-enforces-it). They keep each person's data private.

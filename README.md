@@ -6,7 +6,7 @@ A web app for travel expense reports that works on a phone. Fill in a **per diem
 - a print-ready PDF of the same form,
 - the receipts, as one printable PDF or a zip of individual files.
 
-The single built file is the whole app. It runs as a claude.ai Artifact, where Claude reads the receipts and each person's reports are saved privately to their account. It also runs on any static web host.
+The single built file is the whole app. It runs as a claude.ai Artifact: everyone signs in with their Claude account, each person sees and manages only their own expenses, and Claude reads the receipts. How that privacy is enforced, and how to share the app safely, is in [docs/SECURITY.md](docs/SECURITY.md).
 
 There are two environments, **production** (`main` branch) and **QA** (`qa` branch), each with its own app link and its own data. See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) for the links and how to release a change.
 
@@ -41,16 +41,16 @@ The full rules are in [`docs/`](docs): the per diem and itemized generator specs
 - `src/core.js`: all logic, with no UI. Week splitting, per-cell values for each weekly sheet, the `.xlsx` writer, the PDF form renderer, receipt naming, and the receipt-reading prompt. Runs in the browser and in Node.
 - **Excel output clones the template XML** instead of rebuilding it: the weekly sheet is copied once per week and only the data cells change, so fonts, fills, borders, merges, column widths, number formats, data validation and formulas stay exactly as in `templates/`. Formula results are written as cached values and the workbook is flagged to recalculate on open. Leftover template text (the sample employee, the author's folder path) is dropped from every generated file.
 - **PDF output** is drawn with jsPDF from `src/layouts.json`, a print-layout map (widths, heights, fills, borders, fonts, merges, number formats) extracted from the templates by `tools/extract_layout.py`.
-- `src/app.src.html`: the interface (Preact + htm). `build.js` inlines the core, the layout map and both templates into one file per environment in `dist/`, using the settings in `environments.json` (title, QA band, storage key).
-- Libraries load from cdnjs / jsDelivr at pinned versions: htm 3.1.1 (Preact), JSZip 3.10.1, jsPDF 2.5.1, and pdf.js 3.11.174 (only when a PDF receipt is added).
+- `src/app.src.html`: the interface (Preact + htm). `build.js` inlines the core, the layout map and both templates into one file per environment in `dist/`, using the settings in `environments.json` (title, QA band).
+- Libraries load from jsDelivr at pinned versions with integrity hashes: htm 3.1.1 (Preact), JSZip 3.10.1, jsPDF 2.5.1, and pdf.js 3.11.174 (only when a PDF receipt is added).
 
 ## Where it runs
 
-| | Inside Claude (Artifact) | Any static host |
-| --- | --- | --- |
-| Reports and receipts saved | Privately per person in the Artifact's database (`data/users/<id>/…`), on every device | In that browser's storage (IndexedDB) |
-| Receipt reading | Claude reads each photo | Typed in by hand from the photo |
-| Downloads | Save prompt (share sheet on phones) | Normal browser download |
+Only inside Claude, from each environment's Artifact link:
+- **Sign-in:** everyone signs in with their Claude account.
+- **Saving:** reports and receipts are saved to that person's private area of the app's database (`data/users/<id>/…`), so they open on any device.
+- **On the device:** nothing is stored.
+- **Opened elsewhere or signed out:** only a sign-in screen shows.
 
 Pages can't open a print dialog inside an Artifact, so the PDFs are the print path. On a phone, Download opens the share sheet, which has Print.
 
@@ -58,10 +58,12 @@ Pages can't open a print dialog inside an Artifact, so the PDFs are the print pa
 
 ```bash
 npm install
-npm run build        # dist/prod/ and dist/qa/: the Artifact page plus a standalone index.html for each
+npm run build        # dist/prod/ and dist/qa/: the Artifact page for each environment
 npm test             # builds sample reports in test/out and verifies them
-npm run test:e2e     # headless-browser run-through (needs a Playwright Chromium)
+npm run test:e2e     # browser run-through with several people at once (needs a Playwright Chromium)
 ```
+
+`npm run test:e2e` covers the privacy guarantees: it checks that people only ever see their own data, even when they bypass the app. The full list is in [docs/SECURITY.md](docs/SECURITY.md#how-its-tested).
 
 `npm test` builds fictional sample reports and checks three things:
 - Everything outside the data cells is exactly the template's.
@@ -79,7 +81,7 @@ src/               core.js, app.src.html, layouts.json
 templates/         itemized-expense-claim.xlsx, perdiem-travel-expense.xlsx (the blank Evertz forms)
 tools/             extract_layout.py
 test/              generate.js, verify.py, e2e.js, golden/ (snapshots), fixtures/ (fictional receipts)
-docs/              the per diem and itemized generator specs, ENVIRONMENTS.md
+docs/              the per diem and itemized generator specs, ENVIRONMENTS.md, SECURITY.md
 environments.json  prod and QA settings
 dist/prod, dist/qa built app for each environment
 ```
