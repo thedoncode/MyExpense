@@ -20,7 +20,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const NM = path.join(ROOT, 'node_modules');
 // every library URL the app references, served from the locked node_modules copy
 const LIBS = {};
-for (const f of [path.join(ROOT, 'src', 'app.src.html')]) {
+for (const f of [path.join(ROOT, 'src', 'shell-claude.html'), path.join(ROOT, 'src', 'vendor.json')]) {
   const html = fs.readFileSync(f, 'utf8');
   for (const m of html.matchAll(/https:\/\/cdn\.jsdelivr\.net\/npm\/((?:@[^/]+\/)?[^@/]+)@[^/]+\/([^"'\s]+)/g)) LIBS[m[0]] = path.join(m[1], m[2]);
 }

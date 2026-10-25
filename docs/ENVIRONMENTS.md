@@ -1,16 +1,18 @@
 # Environments
 
-MyExpense has two environments. Both are built from this repo; the branch decides what each one runs.
+MyExpense has two environments, production and QA. Each runs in two places, both built from this repo: as a claude.ai Artifact, and as a website on Hostinger ([HOSTINGER.md](HOSTINGER.md)). The branch decides what each one runs.
 
 | | Production | QA |
 | --- | --- | --- |
 | Branch | `main` | `qa` |
 | App (claude.ai Artifact) | https://claude.ai/artifact/Hx6y2N1JsE6MaqoAhVJSW1 | https://claude.ai/artifact/NVoETTZKp8hEuGwybEEbA4 |
 | Build | `dist/prod/MyExpense.html` | `dist/qa/MyExpense-QA.html` |
+| Website (Hostinger) | Deploys `main` with `APP_ENV=prod` | Deploys `qa` with `APP_ENV=qa` |
+| Website build | `dist/web/` | `dist/web/` (the server sets the title and band) |
 | Looks like | MyExpense | MyExpense with a yellow "QA environment · test data only" band and a QA tag |
 | Saved reports and receipts | Production's own database | QA's own database, completely separate |
 
-Each Artifact has its own database, so nothing created in QA ever shows up in production, and the other way round. The Excel and PDF files QA produces are identical in format to production's; that is what QA is for.
+Each Artifact, and each website, has its own database, so nothing created in QA ever shows up in production, and the other way round. The Claude and website versions don't share data either. The Excel and PDF files QA produces are identical in format to production's; that is what QA is for.
 
 Settings per environment live in [`environments.json`](../environments.json).
 
@@ -25,11 +27,12 @@ Settings per environment live in [`environments.json`](../environments.json).
    npm run build      # builds dist/prod and dist/qa (commit dist/ with the change)
    npm test           # unit, integrity, template fidelity, snapshots, LibreOffice recalculation
    npm run test:e2e   # browser run-through with several people, including the QA build
+   npm run test:server && npm run test:e2e-web   # the website version (needs MySQL/MariaDB)
    ```
 3. **Open a pull request into `qa`.** CI runs the audit, checks `dist/` matches the source, and runs every test. Merge when it's green.
-4. **Publish to QA.** Update the QA Artifact with `dist/qa/MyExpense-QA.html`, keeping its access rules. In a Claude session, ask Claude to republish it to the QA link above.
+4. **Publish to QA.** Merging into `qa` redeploys the QA website by itself. Update the QA Artifact with `dist/qa/MyExpense-QA.html`, keeping its access rules: in a Claude session, ask Claude to republish it to the QA link above.
 5. **Check it in QA** on a phone: a per diem and an itemized report, a receipt photo, and every download.
-6. **Promote.** Open a pull request from `qa` into `main`. When CI is green, merge it, then update the production Artifact with `dist/prod/MyExpense.html`.
+6. **Promote.** Open a pull request from `qa` into `main`. When CI is green, merge it. That redeploys the production website. Then update the production Artifact with `dist/prod/MyExpense.html`.
 
 Never publish a QA build to the production link. The yellow band and the "MyExpense QA" title are there to make that mistake obvious.
 
