@@ -1,0 +1,11 @@
+{
+  "name": "MyExpense",
+  "short_name": "MyExpense",
+  "description": "Per diem and itemized expense reports, with receipt photos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#EDF0F3",
+  "theme_color": "#17202B",
+  "icons": [{ "src": "__ICON__", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
