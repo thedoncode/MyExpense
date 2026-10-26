@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>__APP_TITLE__</title>
+<!-- Filled in by the server for its environment (prod or QA) -->
+<meta name="myexpense-env" content="__ENV_JSON__">
+<link rel="icon" href="/__ICON__" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<!-- Everything is served from this site: no outside fonts, scripts or trackers. Every script carries an
+     integrity hash, and the Content-Security-Policy only allows scripts from this site. -->
+<link rel="stylesheet" href="/__FONTS_CSS__" integrity="__FONTS_CSS_SRI__">
+<link rel="stylesheet" href="/__APP_CSS__" integrity="__APP_CSS_SRI__">
+</head>
+<body>
+<div id="app"></div>
+__SCRIPTS__
+</body>
+</html>
