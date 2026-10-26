@@ -10,7 +10,7 @@ It runs in two ways, from one codebase:
 - **On Claude**, as a claude.ai Artifact. Everyone signs in with their Claude account.
 - **As a website** on your own hosting, such as Hostinger. People are invited and sign in with email, a password and a code from an authenticator app. Setup is in [docs/HOSTINGER.md](docs/HOSTINGER.md).
 
-Either way, each person sees and manages only their own expenses, and Claude reads the receipts. How that privacy is enforced is in [docs/SECURITY.md](docs/SECURITY.md).
+Either way, each person sees and manages only their own expenses, and Claude reads the receipts. To show it to someone, share the **preview**: the whole app with nothing saved and no sign-in ([docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md#shareable-preview)). How that privacy is enforced is in [docs/SECURITY.md](docs/SECURITY.md).
 
 There are two environments, **production** (`main` branch) and **QA** (`qa` branch), each with its own data. See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) for the links and how to release a change.
 
@@ -73,7 +73,7 @@ Pages can't open a print dialog inside an Artifact, so the PDFs are the print pa
 ```bash
 npm ci               # exact locked versions
 npm run audit        # must report 0 vulnerabilities
-npm run build        # dist/prod/, dist/qa/ (Claude) and dist/web/ (website); commit dist/ with your change
+npm run build        # dist/prod/, dist/qa/ (Claude), dist/preview/ and dist/web/ (website); commit dist/ with your change
 npm test             # unit checks, library integrity, sample reports + spreadsheet checks
 npm run test:e2e     # Claude version: browser run-through with several people at once (needs a Playwright Chromium)
 npm run test:server  # web server security checks against a real MySQL/MariaDB (see test/support/server-harness.js)
@@ -101,7 +101,7 @@ It needs Python 3 with `openpyxl`. After an intended change to the output, re-re
 ## Layout
 
 ```
-src/               core.js, app.js, app.css, platform-claude.js, platform-web.js, shell-claude.html, web/ (page shell, fonts, icon), layouts.json, vendor.json
+src/               core.js, app.js, app.css, platform-claude.js, platform-web.js, platform-preview.js, shell-claude.html, web/ (page shell, fonts, icon), layouts.json, vendor.json
 server.js          the website's entry point (Hostinger: Entry file)
 server/            the web server: auth, data, admin, ai, crypto, db, security, setup help
 templates/         itemized-expense-claim.xlsx, perdiem-travel-expense.xlsx (the blank Evertz forms)
@@ -111,5 +111,5 @@ test/              unit.js, integrity.js, generate.js, verify.py, e2e.js, server
 SECURITY.md        how to report a vulnerability
 docs/              the per diem and itemized generator specs, ENVIRONMENTS.md, HOSTINGER.md, SECURITY.md
 environments.json  prod and QA settings
-dist/              built app: prod/ and qa/ (Claude), web/ (website)
+dist/              built app: prod/ and qa/ (Claude), preview/ (shareable, nothing saved), web/ (website)
 ```

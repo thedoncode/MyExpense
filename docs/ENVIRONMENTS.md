@@ -16,6 +16,10 @@ Each Artifact, and each website, has its own database, so nothing created in QA 
 
 Settings per environment live in [`environments.json`](../environments.json).
 
+## Shareable preview
+
+A third Artifact, the **preview** (https://claude.ai/artifact/FYpPZcmBNChmCE9G5KfUW7), is for showing MyExpense to people. It's the whole app, opening on two marked examples. It has no sign-in and saves nothing anywhere: what a visitor enters lasts until they close or reload the page. Receipt reading and downloads work when the visitor opens it in Claude and allows them. It's built from the same source into `dist/preview/MyExpense-Preview.html` (`src/platform-preview.js` keeps everything in memory) and published with only the `sample` and `downloads` capabilities, so it has no database at all. Share it from its Share menu. Republish it after a release, the same way as the others.
+
 ## Releasing a change
 
 `main` and `qa` are protected: changes reach them only through pull requests whose CI check ("Audit, build and test") has passed. Nobody, admins included, can push directly, force-push or delete them.

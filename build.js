@@ -1,12 +1,13 @@
 // Builds MyExpense for both places it runs. One codebase, two targets:
 //   dist/<env>/<Title>.html  the single-file page for that environment's claude.ai Artifact
 //                            (environments.json: prod and qa), with libraries from jsDelivr
+//   dist/preview/            a preview anyone can open: the whole app, nothing saved, no sign-in
 //   dist/web/                the web version the MyExpense server (server/) serves, for example on
 //                            Hostinger. Everything is self-hosted, there are no inline scripts (so the
 //                            Content-Security-Policy can forbid them), and every script and stylesheet
 //                            carries an integrity hash. The server fills in the environment.
 // Usage: node build.js            (everything)
-//        node build.js qa         (one Claude environment, or "web")
+//        node build.js qa         (one Claude environment, or "preview" or "web")
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +17,7 @@ const read = (...p) => fs.readFileSync(path.join(ROOT, ...p));
 const text = (...p) => read(...p).toString('utf8');
 const envs = JSON.parse(text('environments.json'));
 const only = process.argv[2];
-if (only && only !== 'web' && !envs[only]) throw new Error('unknown target: ' + only);
+if (only && only !== 'web' && only !== 'preview' && !envs[only]) throw new Error('unknown target: ' + only);
 
 const core = text('src', 'core.js');
 const css = text('src', 'app.css');
@@ -64,6 +65,25 @@ for (const [name, env] of Object.entries(envs)) {
   const file = env.title.replace(/\s+/g, '-') + '.html';
   fs.writeFileSync(path.join(dir, file), html);
   console.log('built dist/' + name + '/' + file + ' (' + (html.length / 1024).toFixed(0) + ' KB)');
+}
+
+/* ---------- Preview: the whole app for anyone with the link, nothing saved ---------- */
+// A single page like the Claude ones, but its platform keeps everything in memory and asks nobody to
+// sign in (src/platform-preview.js). Published as its own Artifact, separate from prod and QA.
+if (!only || only === 'preview') {
+  const cfg = { name: 'preview', title: 'MyExpense', banner: 'Preview · nothing you enter is saved' };
+  const html = filled(shell, [
+    ['__APP_TITLE__', 'MyExpense Preview'],
+    ['/*__CSS__*/', css],
+    ['/*__CORE__*/', core],
+    ['/*__PLATFORM__*/', text('src', 'platform-preview.js')],
+    ['/*__APP__*/', appFor(cfg, vendor.pdfjs)],
+  ]);
+  for (const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(m[1]);
+  const dir = path.join(ROOT, 'dist', 'preview');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'MyExpense-Preview.html'), html);
+  console.log('built dist/preview/MyExpense-Preview.html (' + (html.length / 1024).toFixed(0) + ' KB)');
 }
 
 /* ---------- Web: static files for the MyExpense server ---------- */

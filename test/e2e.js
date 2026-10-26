@@ -26,14 +26,15 @@ for (const f of [path.join(ROOT, 'src', 'shell-claude.html'), path.join(ROOT, 's
 }
 const envs = JSON.parse(fs.readFileSync(path.join(ROOT, 'environments.json'), 'utf8'));
 const pageFor = (env) => {
-  const body = fs.readFileSync(path.join(ROOT, 'dist', env, envs[env].title.replace(/\s+/g, '-') + '.html'), 'utf8');
+  const file = env === 'preview' ? 'MyExpense-Preview.html' : envs[env].title.replace(/\s+/g, '-') + '.html';
+  const body = fs.readFileSync(path.join(ROOT, 'dist', env, file), 'utf8');
   // the Artifact wraps the page in this skeleton
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>' + body + '</body></html>';
 };
 
 /* ---------- stand-in server: one database per environment, rules enforced here ---------- */
 const RANK = { view: 0, interact: 1, admin: 2, owner: 3 };
-const servers = { prod: new Map(), qa: new Map() };
+const servers = { prod: new Map(), qa: new Map(), preview: new Map() };
 function allowed(who, p) {
   const seg = p.split('/');
   if (seg[0] === 'data' && seg[1] === 'users' && seg.length >= 4) return seg[2] === who.id && RANK[who.level] >= RANK.interact; // data/users/{self}
@@ -91,7 +92,7 @@ async function open(browser, { env = 'prod', who = null, dark = false } = {}) {
     if (u === 'https://myexpense.test/') return route.fulfill({ status: 200, contentType: 'text/html', body: pageFor(env) });
     return route.fulfill({ status: 404, body: '' }); // web fonts are unavailable offline
   });
-  const store = servers[env];
+  const store = servers[env] || new Map();
   await ctx.exposeFunction('__db', (op, p, d, o) => serverOp(store, who && who.signedIn ? who : null, op, p, d, o));
   if (who) await ctx.addInitScript('window.__who = ' + JSON.stringify(who) + ';\n' + RUNTIME);
   const page = await ctx.newPage();
@@ -276,6 +277,46 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     const after = keysOf('prod', 'data/users/u_alex/').length;
     check(before > 0 && after === 0, 'Alex’s area went from ' + before + ' documents to ' + after);
     check(keysOf('prod', 'data/users/u_jamie/').length > 0, 'Jamie’s data is untouched');
+    check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
+    await ctx.close();
+  }
+
+  console.log('P: the shareable preview (nothing saved, no sign-in)');
+  {
+    const { ctx, page, errors } = await open(browser, { env: 'preview' });
+    await page.waitForSelector('text=Preview: nothing you enter is saved');
+    const cards = await page.$$eval('.rcard .cust', els => els.map(e => e.textContent));
+    check(cards.length === 2 && cards.every(t => /\(example\)/.test(t)), 'opens on two marked examples: ' + cards.join(', '));
+    check(await page.isVisible('.envband'), 'the preview band shows');
+    await page.click('text=Contoso LA (example)');
+    await page.click('.dock >> text=Download');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('text=Excel workbook')]);
+    const z = await JSZip.loadAsync(fs.readFileSync(await dl.path()));
+    check(!!z.file('xl/worksheets/sheet1.xml'), 'the example downloads as the Excel form: ' + dl.suggestedFilename());
+    await page.click('[aria-label="Close"]');
+    await page.click('[aria-label="Back to reports"]');
+    await newPerDiem(page, 'Pat Visitor', 'Visitor trial trip');
+    await page.click('[aria-label="Back to reports"]');
+    await page.waitForSelector('text=Visitor trial trip');
+    const dev = await onDevice(page);
+    check(dev.idb.length === 0 && dev.ls === 0 && dev.ss === 0, 'nothing stored on the device ' + JSON.stringify(dev));
+    await page.reload();
+    await page.waitForSelector('.rcard');
+    check(!(await page.innerText('body')).includes('Visitor trial trip'), 'a reload clears what the visitor entered');
+    await shot(page, 'P-preview-home');
+    check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errors } = await open(browser, { env: 'preview', who: ALEX });
+    await page.waitForSelector('text=Preview: nothing you enter is saved');
+    await page.click('text=New itemized report');
+    await page.fill('#it-name', 'Pat Visitor');
+    await page.fill('#it-cust', 'Visitor itemized');
+    await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
+    await page.waitForFunction(() => document.querySelectorAll('.charge-row').length >= 1 && !/Reading receipt|Adding photo/.test(document.body.innerText), null, { timeout: 30000 });
+    check(/Uber/.test(await page.innerText('body')), 'opened in Claude, receipts are read by Claude');
+    check(keysOf('preview').length === 0, 'and nothing is written to any database');
     check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
     await ctx.close();
   }
