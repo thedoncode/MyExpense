@@ -380,14 +380,14 @@ function EnvBand() {
 }
 function StorePill() {
   if (Svc.access !== 'ok') return null;
-  return html`<span class="store-pill"><${Icon} n="lock" size=${16} />Private to you: only you can see these reports</span>`;
+  return html`<span class="store-pill"><${Icon} n=${WORDS.pillIcon} size=${16} />${WORDS.pill}</span>`;
 }
 function SaveState() {
   const s = Model.saveState;
   if (s === 'saving') return html`<span>Saving…</span>`;
   if (s === 'retrying') return html`<span style="color:var(--warn)">Not saved yet. Retrying…</span>`;
   if (s === 'error') return html`<span style="color:var(--bad)">Not saved</span>`;
-  if (s === 'saved') return html`<span>Saved</span>`;
+  if (s === 'saved') return html`<span>${WORDS.saved}</span>`;
   return null;
 }
 
@@ -417,7 +417,7 @@ function Home({ open, openSettings }) {
     </div>
     <div class="section-h"><h2>Your reports</h2>${Model.loaded && reps.length > 0 && html`<span class="muted small">${plural(reps.length, 'report')}</span>`}</div>
     ${!Model.loaded ? html`<div class="list"><div class="skel"></div><div class="skel"></div></div>`
-      : reps.length === 0 ? html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No reports yet</b><p class="small">Start a per diem or itemized report above. Reports save as you type, and only you can see them.</p></div>`
+      : reps.length === 0 ? html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No reports yet</b><p class="small">${WORDS.empty}</p></div>`
       : html`<div class="list">${reps.map(r => html`<${ReportCard} key=${r.id} r=${r} onOpen=${() => open(r)} />`)}</div>`}
   </div>`;
 }
@@ -878,6 +878,7 @@ function Editor({ id, back }) {
 
 // The platform's own screens (sign-in, account), built with the same toolkit as the rest of the app
 const PUI = PLAT.ui({ html, useState, useEffect, useRef, Icon, toast, askConfirm, Field, TextInput, Svc, ENV, emit, lostAccess, plural, initServices });
+const WORDS = { pill: 'Private to you: only you can see these reports', pillIcon: 'lock', saved: 'Saved', empty: 'Start a per diem or itemized report above. Reports save as you type, and only you can see them.', ...(PUI.words || {}) };
 
 function App() {
   useTick();
