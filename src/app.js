@@ -49,7 +49,7 @@ const P = {
   check: 'M5 12l5 5 9-10', alert: 'M12 8v5M12 16.5v.5M10.3 4.2L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z',
   cloud: 'M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.5 1.5A3.5 3.5 0 0 1 17.5 18z', phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
   receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3', cal: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5', x: 'M6 6l12 12M18 6L6 18',
-  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', download: 'M12 4v12M7 11l5 5 5-5M5 20h14', sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', download: 'M12 4v12M7 11l5 5 5-5M5 20h14', sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
 };
 const Icon = ({ n, size }) => html`<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style=${size ? 'width:' + size + 'px;height:' + size + 'px' : ''}><path d=${P[n]} /></svg>`;
 
@@ -96,7 +96,8 @@ const Model = {
   set(list) { this.reports = list; emit(); },
   update(id, fn) {
     const cur = this.get(id); if (!cur) return;
-    const next = fn(cur); if (!next || next === cur) return;
+    let next = fn(cur); if (!next || next === cur) return;
+    next = C.reconcile(next, () => uid('c')); // the report and its statement stay in step
     next.updatedAt = Date.now();
     this.reports = this.reports.map(r => (r.id === id ? next : r));
     schedule(next.id); emit();
@@ -106,7 +107,7 @@ const Model = {
     const r = this.get(id); if (!r) return;
     clearTimeout(timers.get(id)); timers.delete(id);
     this.reports = this.reports.filter(x => x.id !== id); emit();
-    const imgs = new Set((r.charges || []).map(c => c.imageId).filter(Boolean));
+    const imgs = new Set([...(r.charges || []), ...(r.statements || [])].map(c => c.imageId).filter(Boolean));
     try { await Svc.store.deleteReport(id); for (const i of imgs) await Svc.store.deleteImage(i).catch(() => {}); }
     catch (e) { if (writeFailed(e)) toast('Couldn’t delete that report. Try again.'); }
   },
@@ -221,7 +222,7 @@ const aiQueue = []; let aiBusy = false;
 function queueAI(job) { aiQueue.push(job); pumpAI(); }
 async function pumpAI() {
   if (aiBusy) return; const job = aiQueue.shift(); if (!job) return;
-  aiBusy = true; try { await runAI(job); } finally { aiBusy = false; pumpAI(); }
+  aiBusy = true; try { await (job.pageId ? runStatementAI(job) : runAI(job)); } finally { aiBusy = false; pumpAI(); }
 }
 function patchCharge(r, cid, patch) { return { ...r, charges: r.charges.map(c => (c.id === cid ? { ...c, ...patch } : c)) }; }
 function aiErrorText(e) {
@@ -237,6 +238,7 @@ async function runAI({ reportId, chargeId, blobs, imageId }) {
   try {
     const raw = await PLAT.readReceipt(Svc, { blobs, imageId, today: todayISO(), prompt: C.AI_PROMPT(todayISO()) });
     const res = C.normalizeAi(raw);
+    if (res.kind === 'statement') { moveToStatements(reportId, chargeId, imageId, blobs); return; }
     if (!res.transactions.length) {
       Model.update(reportId, r => patchCharge(r, chargeId, { ai: 'failed', currency: 'CAD', aiNote: res.kind === 'unreadable' ? 'Claude couldn’t make out this photo. Fill in the details, or retake it.' : 'No claimable charges found on this photo. Fill in the details if it belongs on the report.' }));
       return;
@@ -257,6 +259,158 @@ async function runAI({ reportId, chargeId, blobs, imageId }) {
     Model.update(reportId, r => patchCharge(r, chargeId, { ai: 'failed', currency: 'CAD', aiNote: aiErrorText(e) }));
   }
 }
+/* ---------- bank statements ---------- */
+function patchPage(r, pid, fn) { return { ...r, statements: (r.statements || []).map(p => (p.id === pid ? fn(p) : p)) }; }
+function patchRow(r, pid, rid, patch) { return patchPage(r, pid, p => ({ ...p, rows: p.rows.map(x => (x.id === rid ? { ...x, ...patch } : x)) })); }
+// A card statement added with the receipts moves to its own section (its ticked charges go on the
+// report from there, like any statement's).
+function moveToStatements(reportId, chargeId, imageId, blobs) {
+  const pageId = uid('p');
+  Model.update(reportId, r => {
+    const c = r.charges.find(x => x.id === chargeId); if (!c) return r;
+    return { ...r, charges: r.charges.filter(x => x.id !== chargeId),
+      statements: [...(r.statements || []), { id: pageId, imageId, name: 'Card statement', w: 0, h: 0, card: '', ai: 'reading', aiNote: '', rows: [] }] };
+  });
+  toast('That looks like a card statement, so it’s under Bank statement now.');
+  Svc.store.getImage(imageId).then(img => { if (img) Model.update(reportId, r => patchPage(r, pageId, p => ({ ...p, w: img.w, h: img.h }))); }).catch(() => {});
+  queueAI({ reportId, pageId, blobs, imageId });
+}
+async function runStatementAI({ reportId, pageId, blobs, imageId }) {
+  const set = (fn) => Model.update(reportId, r => patchPage(r, pageId, fn));
+  if (!aiOn()) { set(p => ({ ...p, ai: null })); return; }
+  try {
+    const raw = await PLAT.readReceipt(Svc, { blobs, imageId, kind: 'statement', today: todayISO(), prompt: C.STATEMENT_PROMPT(todayISO()) });
+    const res = C.normalizeStatement(raw);
+    const rows = res.rows.map(x => ({ ...x, id: uid('s'), chargeId: null, source: 'ai' }));
+    const note = res.kind === 'not_statement' ? 'This doesn’t look like a card statement. Tick and add the charges yourself, or remove the page.'
+      : !rows.length ? 'Claude couldn’t find any charges on this page. Add them yourself, or retake the photo.' : '';
+    set(p => ({ ...p, ai: rows.length ? 'read' : 'failed', aiNote: note, card: res.card || p.card, rows }));
+  } catch (e) {
+    if (PLAT.aiFailed(Svc, e)) emit();
+    if (PLAT.classify(e) === 'signin') { lostAccess('signin'); return; }
+    set(p => ({ ...p, ai: 'failed', aiNote: aiErrorText(e).replace('this receipt', 'this statement page').replace('Fill in the details from the photo.', 'Tick and add the charges yourself.') }));
+  }
+}
+// Statement pages are kept sharper than receipts, so small print stays readable
+async function processStatementFile(file) {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  const name = String(file.name || 'Statement').replace(/\.[a-z0-9]{2,5}$/i, '').slice(0, 60);
+  if (!isPdf) {
+    let src;
+    try { src = await decodeImage(file); } catch (e) { throw new Error('That picture can’t be opened here. Try a JPEG or PNG screenshot.'); }
+    if (src.width * src.height > 80e6) throw new Error('That image is too large to open (over 80 megapixels).');
+    const out = await scaleToJpeg(src, 2400, 0.82);
+    return { pages: [{ blob: out.blob, w: out.w, h: out.h, name }], orig: null };
+  }
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), enableXfa: false, isEvalSupported: false }).promise;
+  const n = Math.min(pdf.numPages, 12);
+  if (pdf.numPages > 12) toast('Only the first 12 pages of ' + (file.name || 'that PDF') + ' were added.');
+  const pages = [];
+  for (let k = 1; k <= n; k++) {
+    const page = await pdf.getPage(k);
+    const vp0 = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: 1700 / vp0.width });
+    const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    pages.push({ blob: await canvasBlob(cv, 0.82), w: cv.width, h: cv.height, name: name + (n > 1 ? ' p' + k : '') });
+  }
+  // The PDF itself is kept too (up to 6 MB), so the statement exports exactly as it was uploaded
+  const orig = file.size <= 6 * 1024 * 1024 ? { blob: file.slice(0, file.size, 'application/pdf'), name: file.name || 'statement.pdf', type: 'application/pdf' } : null;
+  return { pages, orig };
+}
+async function addStatementFiles(reportId, files) {
+  const tooBig = [...files].filter(f => f.size > MAX_UPLOAD);
+  if (tooBig.length) toast(tooBig.map(f => f.name || 'A file').join(', ') + ' is over 25 MB, so it was skipped.');
+  const list = (await expandFiles([...files].filter(f => f.size <= MAX_UPLOAD))).filter(f => /^image\//.test(f.type) || f.type === 'application/pdf' || /\.(pdf|jpe?g|png|heic|webp)$/i.test(f.name || ''));
+  if (!list.length) { toast('Choose a screenshot, photo, PDF or Word file of your statement.'); return; }
+  for (const file of list) {
+    const holder = uid('p');
+    Model.update(reportId, r => ({ ...r, statements: [...(r.statements || []), { id: holder, imageId: null, name: String(file.name || 'Statement').slice(0, 60), w: 0, h: 0, card: '', ai: 'processing', aiNote: '', rows: [] }] }));
+    try {
+      const { pages, orig } = await processStatementFile(file);
+      if (!Svc.store) return;
+      const made = [];
+      for (const pg of pages) {
+        const imageId = uid('i');
+        const withOrig = !made.length && orig;
+        try { await Svc.store.putImage(imageId, pg.blob, { w: pg.w, h: pg.h }, withOrig ? orig : null); }
+        catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the statement page. Check your connection and add it again.'); }
+        made.push({ ...pg, imageId, id: made.length ? uid('p') : holder, orig: !!withOrig });
+      }
+      const reading = aiOn();
+      Model.update(reportId, r => {
+        const at = (r.statements || []).findIndex(p => p.id === holder); if (at < 0) return r;
+        const st = r.statements.slice();
+        st.splice(at, 1, ...made.map(m => ({ id: m.id, group: holder, orig: m.orig, imageId: m.imageId, name: m.name, w: m.w, h: m.h, card: '', ai: reading ? 'reading' : null, aiNote: '', rows: [] })));
+        return { ...r, statements: st };
+      });
+      if (reading) for (const m of made) queueAI({ reportId, pageId: m.id, blobs: [m.blob], imageId: m.imageId });
+    } catch (e) {
+      Model.update(reportId, r => patchPage(r, holder, p => ({ ...p, ai: 'failed', aiNote: (e && e.message) || 'Couldn’t add that file.' })));
+    }
+  }
+}
+// The statements as uploaded: each PDF as it was, and each screenshot or photo as a picture
+async function statementFiles(r) {
+  const files = [], done = new Set();
+  for (const p of r.statements || []) {
+    if (!p.imageId || done.has(p.group || p.id)) continue;
+    const o = p.orig && Svc.store.getOriginal ? await Svc.store.getOriginal(p.imageId).catch(() => null) : null;
+    if (o && o.blob) { files.push({ blob: o.blob, ext: 'pdf', name: p.name.replace(/ p1$/, '') }); done.add(p.group || p.id); continue; }
+    const img = await Svc.store.getImage(p.imageId).catch(() => null);
+    if (img && img.blob) files.push({ blob: img.blob, ext: 'jpg', name: p.name });
+  }
+  return files.map((f, i) => ({ ...f, name: C.safeName('Statement ' + String(i + 1).padStart(2, '0') + (f.name ? ' - ' + f.name : '')) }));
+}
+async function exportStatementFiles(r) {
+  const files = await statementFiles(r);
+  if (!files.length) { toast('There are no statement pages on this report.'); return false; }
+  const zip = new window.JSZip();
+  for (const f of files) zip.file(f.name + '.' + f.ext, f.blob);
+  return saveFile(C.fileBase(r) + ' Bank Statement files.zip', await zip.generateAsync({ type: 'blob' }));
+}
+async function downloadStatementPage(p, original) {
+  if (original) {
+    const o = await Svc.store.getOriginal(p.imageId).catch(() => null);
+    if (o && o.blob) return saveFile(C.safeName(p.name.replace(/ p1$/, '') || 'Statement') + '.pdf', o.blob);
+  }
+  const img = await Svc.store.getImage(p.imageId).catch(() => null);
+  if (!img || !img.blob) { toast('Couldn’t load that page.'); return false; }
+  return saveFile(C.safeName(p.name || 'Statement page') + '.jpg', img.blob);
+}
+// A receipt for a charge that has none (for example one that came from the statement)
+async function attachReceiptFile(reportId, chargeId, file) {
+  if (file.size > MAX_UPLOAD) { toast((file.name || 'That file') + ' is over 25 MB.'); return; }
+  try {
+    const img = await processFile(file);
+    const imageId = uid('i');
+    try { await Svc.store.putImage(imageId, img.blob, { w: img.w, h: img.h }, img.orig); }
+    catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the receipt. Check your connection and try again.'); }
+    Model.update(reportId, r => patchCharge(r, chargeId, { imageId }));
+    toast('Receipt attached.');
+  } catch (e) { toast((e && e.message) || 'Couldn’t attach that receipt.'); }
+}
+async function exportStatementPdf(r) {
+  const pages = [];
+  for (const p of r.statements || []) {
+    const img = p.imageId ? await Svc.store.getImage(p.imageId).catch(() => null) : null;
+    pages.push({ data: img && img.blob ? new Uint8Array(await img.blob.arrayBuffer()) : null, w: (img && img.w) || p.w || 1, h: (img && img.h) || p.h || 1, label: p.name });
+  }
+  if (!pages.length) { toast('There are no statement pages on this report.'); return false; }
+  const items = C.statementList(r);
+  const missing = C.statementCheck(r).missing.map(c => (c.date ? C.fmtNice(c.date) : 'Undated') + ' · ' + (C.CAT[c.category] ? C.CAT[c.category].label : 'Charge') + (c.vendor ? ' · ' + c.vendor : '') + (C.chargeCAD(c) !== null ? ' · ' + cad(C.chargeCAD(c)) : ''));
+  const s = C.itemizedSummary(r);
+  const cards = [...new Set((r.statements || []).map(p => p.card).filter(Boolean))];
+  const sub = [(r.customer || 'Untitled') + ' itemized expenses' + (s.first ? ' · ' + rangeText(s.first, s.last) : ''), 'Employee: ' + (r.name || '—')];
+  if (cards.length) sub.push('Card: ' + cards.join(', '));
+  const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter', compress: true });
+  doc.setProperties({ title: C.fileBase(r) + ' Bank Statement', author: r.name || '', creator: ENV.title });
+  C.pdfStatement(doc, { heading: (r.customer || '') + ' · ' + (r.name || '') + ' · bank statement', sub, items, missing, pages, fresh: true });
+  return saveFile(C.fileBase(r) + ' Bank Statement.pdf', doc.output('blob'));
+}
+
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 async function expandFiles(files) {
   const out = [];
@@ -361,9 +515,9 @@ async function downloadReceipt(c) {
 function newReport(type) {
   const base = { id: uid('r'), type, name: Model.settings.name || '', customer: '', createdAt: Date.now(), updatedAt: Date.now() };
   if (type === 'perdiem') return { ...base, start: '', end: '', partialMode: null, partialDays: [] };
-  return { ...base, manager: Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron', location: '', charges: [] };
+  return { ...base, manager: Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron', location: '', charges: [], statements: [] };
 }
-function isBlank(r) { return r.type === 'perdiem' ? !r.customer && !r.start && !r.end : !r.customer && !(r.charges || []).length; }
+function isBlank(r) { return r.type === 'perdiem' ? !r.customer && !r.start && !r.end : !r.customer && !(r.charges || []).length && !(r.statements || []).length; }
 function reportStatus(r) {
   if (r.type === 'perdiem') {
     const p = C.perDiemProblems(r); const s = C.perDiemSummary(r);
@@ -569,7 +723,10 @@ function ItemizedEditor({ r }) {
     const sat = C.saturdayOf(c.date); if (!byWeek.has(sat)) byWeek.set(sat, []); byWeek.get(sat).push(c);
   }
   const weekTotal = (sat) => (sum.weeks.find(w => w.weekEnding === sat) || { total: 0 }).total;
-  const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
+  const chk = (r.statements || []).length ? C.statementCheck(r) : null;
+  const missingR = C.missingReceipts(r);
+  const onSt = (c) => !chk ? null : chk.onStatement.has(c.id) ? (chk.onStatement.get(c.id).mismatch ? { state: 'mismatch', amount: chk.onStatement.get(c.id).row.amount } : { state: 'on' }) : chk.ready && c.ai !== 'reading' && c.ai !== 'processing' ? { state: 'missing' } : null;
+  const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} st=${onSt(c)} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
 
   return html`
   <div class="wrap">
@@ -597,8 +754,8 @@ function ItemizedEditor({ r }) {
       <input ref=${camRef} id="it-cam" class="vh" type="file" accept="image/*" capture="environment" onChange=${e => { if (e.target.files.length) addFiles(r.id, e.target.files); e.target.value = ''; }} />
       <input ref=${upRef} id="it-up" class="vh" type="file" accept="image/*,application/pdf,.docx" multiple onChange=${e => { if (e.target.files.length) addFiles(r.id, e.target.files); e.target.value = ''; }} />
       <p class="note">${aiOn()
-        ? html`<${Icon} n="sparkle" size=${14} /> Claude reads each receipt or card statement and fills in the charge for you to check. Photos, PDFs, Word files with pictures and pasted screenshots all work.`
-        : 'Each photo becomes a charge with the receipt attached. Fill in the date, type and amount from it. Photos, PDFs, Word files with pictures and pasted screenshots all work.'}</p>
+        ? html`<${Icon} n="sparkle" size=${14} /> Claude reads each receipt and fills in the charge for you to check. Photos, PDFs, Word files with pictures and pasted screenshots all work. Card statements go under Bank statement, below.`
+        : 'Each photo becomes a charge with the receipt attached. Fill in the date, type and amount from it. Photos, PDFs, Word files with pictures and pasted screenshots all work. Card statements go under Bank statement, below.'}</p>
     </section>
 
     ${r.charges.length === 0 && html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No charges yet</b><p class="small">Usually claimed: Uber and taxi rides, vehicle rentals, airline baggage fees and fuel. Parking goes on only when you OK it.</p></div>`}
@@ -613,6 +770,8 @@ function ItemizedEditor({ r }) {
       <div class="charges">${byWeek.get(sat).map(row)}</div>
     </div>`)}
 
+    <${StatementSection} r=${r} />
+
     ${r.charges.length > 0 && html`<section class="panel">
       <div class="panel-h"><h2>Totals</h2><span class="muted small">CAD</span></div>
       <div class="panel-b">
@@ -621,6 +780,7 @@ function ItemizedEditor({ r }) {
           ${sum.weeks.length === 0 && html`<div class="row faint"><span>No complete charges yet</span><span>${cad(0)}</span></div>`}
           <div class="row tot"><span>Grand total</span><span>${cad(sum.total)}</span></div>
         </div>
+        ${missingR.length > 0 && html`<div class="left-off"><b class="small" style="color:var(--warn)">Missing receipts</b><ul class="plain small">${missingR.map(c => html`<li key=${c.id}><button class="linkbtn" onClick=${() => { setOpenId(c.id); setTimeout(() => { const el = document.querySelector('[aria-expanded="true"]'); if (el) el.scrollIntoView({ block: 'center' }); }, 50); }}>${label(c)}${C.chargeCAD(c) !== null ? ' · ' + cad(C.chargeCAD(c)) : ''}</button></li>`)}</ul><span class="small muted">These charges are on the report without a receipt. Attach one to each if you have it.</span></div>`}
         ${sum.left.length > 0 && html`<div class="left-off"><b class="small" style="color:var(--warn)">Not on the report yet</b><ul class="plain small">${sum.left.map(x => html`<li>${x.c.date ? C.fmtNice(x.c.date) : 'Undated'} ${x.c.category && C.CAT[x.c.category] ? '· ' + C.CAT[x.c.category].label : ''}${x.c.vendor ? ' · ' + x.c.vendor : ''}: ${x.issue}</li>`)}</ul></div>`}
       </div>
     </section>`}
@@ -633,7 +793,7 @@ function shortIssue(t) {
   if (/CAD amount/.test(t)) return 'Needs CAD amount';
   return t.replace(/^needs/, 'Needs').replace(/^is still/, 'Still').replace(/^amount/, 'Amount');
 }
-function ChargeItem({ c, open, onToggle, reportId, onView }) {
+function ChargeItem({ c, st, open, onToggle, reportId, onView }) {
   const url = useImageURL(c.imageId);
   const issue = C.chargeIssue(c);
   const cat = C.CAT[c.category];
@@ -644,6 +804,10 @@ function ChargeItem({ c, open, onToggle, reportId, onView }) {
   else {
     if (c.ai === 'read' && !c.checked) chips.push(html`<span class="chip warn"><span class="dot"></span>Check details</span>`);
     if (issue) chips.push(html`<span class="chip bad"><span class="dot"></span>${shortIssue(issue)}</span>`);
+    if (st && st.state === 'on') chips.push(html`<span class="chip ok"><${Icon} n="check" size=${12} />On statement</span>`);
+    if (st && st.state === 'mismatch') chips.push(html`<span class="chip bad"><span class="dot"></span>Statement shows ${cad(st.amount)}</span>`);
+    if (st && st.state === 'missing') chips.push(html`<span class="chip warn"><span class="dot"></span>Not on statement</span>`);
+    if (!c.imageId) chips.push(html`<span class="chip warn"><span class="dot"></span>No receipt</span>`);
   }
   return html`<div class="charge">
     <button class="charge-row" onClick=${onToggle} aria-expanded=${open}>
@@ -667,7 +831,9 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
     Model.update(reportId, r => {
       const charges = r.charges.filter(x => x.id !== c.id);
       if (c.imageId && Svc.store && !charges.some(x => x.imageId === c.imageId)) Svc.store.deleteImage(c.imageId).catch(() => {});
-      return { ...r, charges };
+      // its statement line comes off the claim too
+      const statements = (r.statements || []).map(p => (p.rows.some(x => x.chargeId === c.id) ? { ...p, rows: p.rows.map(x => (x.chargeId === c.id ? { ...x, chargeId: null, claim: false } : x)) } : p));
+      return { ...r, charges, statements };
     });
   }
   const busy = c.ai === 'processing' || c.ai === 'reading';
@@ -701,6 +867,7 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
       <//>`}
     </div>
     ${cat && !cat.q && html`<label class="check"><input type="checkbox" checked=${!!c.approved} onChange=${e => set({ approved: e.target.checked })} /><span><b>Include on this report.</b> ${cat.label} isn’t on the usual list (taxi, rental, baggage, fuel). Tick this only if it’s approved.</span></label>`}
+    ${!c.imageId && !busy && html`<div class="no-receipt"><span class="small">No receipt on this charge. It stays on the report; attach the receipt if you have it.</span><${AttachButton} reportId=${reportId} chargeId=${c.id} /></div>`}
     <div class="edit-actions">
       <button class="btn sm ghost danger" onClick=${del}><${Icon} n="trash" size=${18} />Delete</button>
       ${c.ai === 'read' && !c.checked
@@ -719,6 +886,157 @@ function ImageViewer({ c, onClose }) {
       <div class="sheet-h"><h2>${c.vendor || 'Receipt'}${c.date ? ' · ' + C.fmtNice(c.date) : ''}</h2><button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
       ${url ? html`<img src=${url} alt="Receipt photo" />` : html`<div class="skel" style="height:300px"></div>`}
       <button class="btn" disabled=${busy || !url} onClick=${async () => { setBusy(true); try { await downloadReceipt(c); } finally { setBusy(false); } }}><${Icon} n="download" />${isPdf ? 'Download receipt PDF' : 'Download photo'}</button>
+    </div>
+  </div>`;
+}
+
+/* ---- bank statement ---- */
+const label = (c) => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'));
+function StatementSection({ r }) {
+  const upRef = useRef(null), camRef = useRef(null);
+  const [drag, setDrag] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  const pages = r.statements || [];
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const chk = C.statementCheck(r);
+  const noReceipt = C.missingReceipts(r);
+  const offers = C.receiptSuggestions(r);
+  const add = (files) => { if (files && files.length) addStatementFiles(r.id, files); };
+  const trouble = chk.missing.length || chk.mismatches.length || noReceipt.length;
+  return html`<section class=${'panel stmt' + (drag ? ' drag' : '')} aria-labelledby="stmt-h"
+      onDragOver=${e => { e.preventDefault(); setDrag(true); }} onDragLeave=${() => setDrag(false)}
+      onDrop=${e => { e.preventDefault(); setDrag(false); if (e.dataTransfer) add(e.dataTransfer.files); }}>
+    <div class="panel-h"><h2 id="stmt-h">Bank statement</h2>${pages.length > 0 && html`<span class="muted small">${plural(pages.length, 'page')}</span>`}</div>
+    <div class="panel-b">
+      <p class="muted small">Add the card statement pages that show these charges, as screenshots, photos or a PDF. Every charge ticked on the statement goes on the report, with or without a receipt. Each one is matched to its receipt, and a receipt in another currency gets its CAD amount from the statement. The statement downloads on its own, separate from the receipts.</p>
+      <div class="capture-btns">
+        ${touch && html`<button class="btn" onClick=${() => camRef.current && camRef.current.click()}><${Icon} n="camera" />Photograph a page</button>`}
+        <button class="btn" onClick=${() => upRef.current && upRef.current.click()}><${Icon} n="upload" />Add statement pages</button>
+      </div>
+      <input ref=${camRef} id="st-cam" class="vh" type="file" accept="image/*" capture="environment" onChange=${e => { add(e.target.files); e.target.value = ''; }} />
+      <input ref=${upRef} id="st-up" class="vh" type="file" accept="image/*,application/pdf,.docx" multiple onChange=${e => { add(e.target.files); e.target.value = ''; }} />
+      ${chk.ready && r.charges.length > 0 && html`<div class=${'stmt-sum' + (trouble ? ' warn' : ' ok')}>
+        <${Icon} n=${trouble ? 'alert' : 'check'} size=${18} />
+        <span>${chk.onStatement.size} of ${plural(r.charges.length, 'charge')} on the report ${chk.onStatement.size === 1 ? 'is' : 'are'} on your statement.${chk.mismatches.length ? ' ' + plural(chk.mismatches.length, 'amount') + ' ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match.' : ''}${chk.missing.length ? ' Not on the statement: ' + chk.missing.map(label).join(', ') + '.' : ''}${noReceipt.length ? ' Missing ' + (noReceipt.length === 1 ? 'a receipt' : plural(noReceipt.length, 'receipt')) + ': ' + noReceipt.map(label).join(', ') + '.' : ''}</span>
+      </div>`}
+      ${offers.map(o => html`<div class="stmt-bar" key=${o.receipt.id}><span class="small">Is your ${o.receipt.vendor || 'receipt'} receipt (${o.receipt.currency} ${C.round2(o.receipt.amount || 0).toFixed(2)}, ${o.receipt.date ? C.fmtMonD(o.receipt.date) : 'undated'}) for ${o.row.description || 'the statement line'} (${cad(o.row.amount)}, ${o.row.date ? C.fmtMonD(o.row.date) : 'undated'})?</span>
+        <button class="btn sm primary" onClick=${() => Model.update(r.id, q => C.attachReceipt(q, o.charge.id, o.receipt.id))}>Yes, match them</button></div>`)}
+      ${pages.map((p, i) => html`<${StatementPage} key=${p.id} r=${r} p=${p} n=${i + 1} links=${chk.links} onView=${() => setViewer(p.id)} />`)}
+    </div>
+    ${viewer && pages.some(p => p.id === viewer) && html`<${StatementViewer} p=${pages.find(p => p.id === viewer)} onClose=${() => setViewer(null)} />`}
+  </section>`;
+}
+const PAIRED = ['linked', 'same', 'fx'];
+function StatementPage({ r, p, n, links, onView }) {
+  const url = useImageURL(p.imageId);
+  const [all, setAll] = useState(false);
+  const [edit, setEdit] = useState(null);
+  const busy = p.ai === 'processing' || p.ai === 'reading';
+  const onClaim = (x) => x.claim || (links.get(x.id) && PAIRED.includes(links.get(x.id).how));
+  const claimed = p.rows.filter(onClaim);
+  const shown = all ? p.rows : claimed;
+  async function remove() {
+    const ok = await askConfirm({ title: 'Remove this statement page?', body: 'The page comes off the report. Charges already on the report stay on it.', yes: 'Remove page', danger: true });
+    if (!ok) return;
+    Model.update(r.id, x => ({ ...x, statements: x.statements.filter(q => q.id !== p.id) }));
+    if (p.imageId && Svc.store && !(r.statements || []).some(q => q.id !== p.id && q.imageId === p.imageId)) Svc.store.deleteImage(p.imageId).catch(() => {});
+  }
+  function addRow() {
+    const id = uid('s');
+    Model.update(r.id, x => patchPage(x, p.id, q => ({ ...q, rows: [...q.rows, { id, date: null, description: '', amount: null, currency: 'CAD', credit: false, foreign: null, category: 'taxi', marked: false, claim: true, chargeId: null, source: 'you' }] })));
+    setAll(true); setEdit(id);
+  }
+  let status;
+  if (p.ai === 'processing') status = html`<span class="chip info"><span class="spin"></span>Adding page</span>`;
+  else if (p.ai === 'reading') status = html`<span class="chip info"><span class="spin"></span>Reading statement</span>`;
+  else if (p.rows.length) status = html`<span class="chip info">${plural(claimed.length, 'charge')} on the report, of ${p.rows.length} lines</span>`;
+  return html`<div class="stmt-page">
+    <div class="stmt-head">
+      <button class="thumb stmt-thumb" onClick=${onView} disabled=${!url} aria-label=${'View statement page ' + n}>${url ? html`<img src=${url} alt="" />` : busy ? html`<span class="spin"></span>` : html`<${Icon} n="receipt" />`}</button>
+      <div style="display:grid;gap:4px;min-width:0">
+        <b>Page ${n}<span class="muted" style="font-weight:400">${p.name ? ' · ' + p.name : ''}${p.card ? ' · ' + p.card : ''}</span></b>
+        <span class="l2">${status}</span>
+        <div class="row-btns"><button class="btn sm ghost danger" onClick=${remove}><${Icon} n="trash" size=${16} />Remove page</button></div>
+      </div>
+    </div>
+    ${p.aiNote && html`<p class="small" style="color:var(--warn)">${p.aiNote}</p>`}
+    ${shown.length > 0 && html`<ul class="stmt-rows">${shown.map(x => html`<${StatementRow} key=${x.id} r=${r} p=${p} x=${x} link=${links.get(x.id)} editing=${edit === x.id} onEdit=${() => setEdit(edit === x.id ? null : x.id)} />`)}</ul>`}
+    <div class="row-btns">
+      ${p.rows.length > claimed.length && html`<button class="linkbtn" onClick=${() => setAll(!all)}>${all ? 'Show only charges on the report' : 'Show all ' + p.rows.length + ' lines'}</button>`}
+      ${!busy && html`<button class="linkbtn" onClick=${addRow}>Add a charge from this page</button>`}
+    </div>
+  </div>`;
+}
+function AttachButton({ reportId, chargeId, label }) {
+  const ref = useRef(null);
+  const [busy, setBusy] = useState(false);
+  return html`<span>
+    <button class="btn sm" disabled=${busy} onClick=${() => ref.current && ref.current.click()}><${Icon} n="receipt" size=${16} />${busy ? 'Attaching…' : label || 'Attach receipt'}</button>
+    <input ref=${ref} class="vh" type="file" accept="image/*,application/pdf" aria-label="Receipt to attach" onChange=${async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; setBusy(true); try { await attachReceiptFile(reportId, chargeId, f); } finally { setBusy(false); } }} />
+  </span>`;
+}
+function StatementRow({ r, p, x, link, editing, onEdit }) {
+  const set = (patch) => Model.update(r.id, q => patchRow(q, p.id, x.id, patch));
+  const id = (k) => 'sr-' + x.id + '-' + k;
+  const c = link && link.charge;
+  const paired = link && PAIRED.includes(link.how);
+  const what = c ? (C.CAT[c.category] ? C.CAT[c.category].label : 'charge') + (c.vendor ? ' · ' + c.vendor : '') : '';
+  // Ticking a line puts it on the report; unticking takes off the charge it made, if it has no receipt
+  function toggle(on) {
+    if (on) { set({ claim: true }); return; }
+    Model.update(r.id, q => {
+      const ch = x.chargeId && q.charges.find(y => y.id === x.chargeId);
+      const out = patchRow(q, p.id, x.id, { claim: false, chargeId: null });
+      return ch && !ch.imageId ? { ...out, charges: out.charges.filter(y => y.id !== ch.id) } : out;
+    });
+  }
+  const locked = paired && c && !!c.imageId; // paired with a receipt: delete the charge to take it off
+  let state = null;
+  if (paired) {
+    const v = C.chargeCAD(c);
+    const off = (x.currency || 'CAD') === 'CAD' && v !== null && Math.abs(v - x.amount) >= 0.005;
+    state = html`${off
+      ? html`<span class="chip bad"><span class="dot"></span>The report has ${cad(v)} for ${what}</span>
+          <button class="btn sm" onClick=${() => Model.update(r.id, q => patchCharge(q, c.id, c.currency === 'CAD' ? { amount: x.amount } : { cad: x.amount }))}>Use ${cad(x.amount)} from the statement</button>`
+      : html`<span class="chip ok"><${Icon} n="check" size=${14} />On the report: ${what}</span>`}
+      ${c.imageId ? html`<span class="chip ok"><${Icon} n="receipt" size=${12} />Receipt</span>` : html`<span class="chip warn"><span class="dot"></span>No receipt</span><${AttachButton} reportId=${r.id} chargeId=${c.id} />`}`;
+  } else if (link && link.how === 'cad') {
+    state = html`<button class="btn sm" onClick=${() => Model.update(r.id, q => patchRow(patchCharge(q, c.id, { cad: x.amount }), p.id, x.id, { chargeId: c.id }))}>
+      Is this ${c.vendor || 'the charge'} (${c.currency} ${C.round2(c.amount || 0).toFixed(2)})? Use ${cad(x.amount)} as its CAD</button>`;
+  } else if (link && link.how === 'dupe') state = html`<span class="chip info">Also on another page</span>`;
+  else if (x.claim && x.amount === null) state = html`<span class="chip warn"><span class="dot"></span>Add the amount to put it on the report</span>`;
+  const fx = x.foreign ? x.foreign.currency + ' ' + x.foreign.amount.toFixed(2) : '';
+  return html`<li class=${'stmt-row' + (x.claim || paired ? ' on' : '')}>
+    <div class="stmt-line">
+      <input id=${id('claim')} type="checkbox" checked=${!!(x.claim || paired)} disabled=${x.credit || locked} aria-label=${'Put ' + (x.description || 'this charge') + ' on the report'} onChange=${e => toggle(e.target.checked)} />
+      <label for=${id('claim')} class="stmt-desc"><span class="d mono">${x.date ? C.fmtMonD(x.date) : '—'}</span><span>${x.description || html`<span class="faint">No description</span>`}${fx && html`<span class="faint"> · ${fx}</span>`}${x.credit && html`<span class="faint"> · credit</span>`}</span></label>
+      <span class="mono stmt-amt">${x.amount !== null ? C.round2(x.amount).toFixed(2) : '—'}</span>
+      <button class="icon-btn sm" onClick=${onEdit} aria-label=${'Edit ' + (x.description || 'this line')} aria-expanded=${editing}><${Icon} n="edit" size=${16} /></button>
+    </div>
+    ${state && html`<div class="stmt-state">${state}</div>`}
+    ${editing && html`<div class="fields stmt-edit">
+      <${Field} id=${id('date')} label="Date"><input id=${id('date')} class="inp" type="date" value=${x.date || ''} onChange=${e => set({ date: e.target.value || null })} /><//>
+      <${Field} id=${id('desc')} label="Description"><${TextInput} id=${id('desc')} value=${x.description} max=${60} onValue=${v => set({ description: v })} /><//>
+      <${Field} id=${id('amt')} label=${'Amount (' + (x.currency || 'CAD') + ')'}><${MoneyInput} id=${id('amt')} value=${x.amount} onValue=${v => set({ amount: v })} /><//>
+      <${Field} id=${id('cat')} label="Type on the report">
+        <select id=${id('cat')} class="inp" value=${x.category} onChange=${e => set({ category: e.target.value })}>${C.CATS.map(k => html`<option value=${k.key}>${k.label}</option>`)}</select>
+      <//>
+      <div class="row-btns"><button class="btn sm" onClick=${onEdit}>Done</button>${x.source === 'you' && html`<button class="btn sm ghost danger" onClick=${() => { toggle(false); Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, rows: pg.rows.filter(y => y.id !== x.id) }))); }}>Delete line</button>`}</div>
+    </div>`}
+  </li>`;
+}
+function StatementViewer({ p, onClose }) {
+  const url = useImageURL(p.imageId);
+  const [busy, setBusy] = useState(false);
+  const dl = async (orig) => { setBusy(true); try { await downloadStatementPage(p, orig); } finally { setBusy(false); } };
+  return html`<div class="scrim" onClick=${e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class="sheet viewer stmt-viewer" role="dialog" aria-label="Statement page">
+      <div class="sheet-h"><h2>${p.name || 'Statement page'}</h2><button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
+      ${url ? html`<img src=${url} alt="Statement page" />` : html`<div class="skel" style="height:300px"></div>`}
+      <div class="row-btns">
+        <button class="btn" disabled=${busy || !url} onClick=${() => dl(false)}><${Icon} n="download" />Download this page</button>
+        ${p.orig && html`<button class="btn" disabled=${busy} onClick=${() => dl(true)}><${Icon} n="download" />Download the PDF as uploaded</button>`}
+      </div>
     </div>
   </div>`;
 }
@@ -753,7 +1071,20 @@ function ExportSheet({ r, onClose }) {
     if (fx) notes.push('CAD amount entered by you for ' + plural(fx, 'foreign-currency receipt') + '.');
     notes.push('HST columns left blank.');
     receipts = C.receiptList(r);
+    const noR = C.missingReceipts(r).filter(c => !C.chargeIssue(c));
+    if (noR.length) warns.push('Missing ' + (noR.length === 1 ? 'a receipt' : plural(noR.length, 'receipt')) + ': ' + noR.map(c => label(c)).join(', ') + '. ' + (noR.length === 1 ? 'It’s' : 'They’re') + ' on the report without one.');
+    const pages = r.statements || [];
+    const stReading = pages.filter(p => p.ai === 'reading' || p.ai === 'processing').length;
+    if (stReading) warns.push(plural(stReading, 'statement page') + ' still being read.');
+    if (pages.length) {
+      const chk = C.statementCheck(r);
+      if (chk.missing.length) warns.push(plural(chk.missing.length, 'charge') + ' on the report ' + (chk.missing.length === 1 ? 'isn’t' : 'aren’t') + ' on your bank statement: ' + chk.missing.map(c => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'))).join(', ') + '. Add the statement page that shows ' + (chk.missing.length === 1 ? 'it' : 'them') + '.');
+      if (chk.mismatches.length) warns.push(plural(chk.mismatches.length, 'charge') + ' on the report ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match the amount on your statement. Fix ' + (chk.mismatches.length === 1 ? 'it' : 'them') + ' under Bank statement.');
+      if (chk.unlisted.length) warns.push(plural(chk.unlisted.length, 'line') + ' ticked on your statement ' + (chk.unlisted.length === 1 ? 'needs' : 'need') + ' an amount to go on the report.');
+      if (chk.suggestions.length) warns.push('Your statement may show the CAD for ' + plural(chk.suggestions.length, 'foreign-currency charge') + '. Check under Bank statement.');
+    }
   }
+  const stTicked = isPd ? 0 : C.statementList(r).length;
   const partialDates = isPd ? sum.weeks.flatMap(w => w.days).filter(d => d.partial).map(d => C.fmtNice(d.date)) : [];
   async function run(kind) {
     setBusy(kind);
@@ -763,6 +1094,8 @@ function ExportSheet({ r, onClose }) {
       else if (kind === 'pdf') await exportPdf(r);
       else if (kind === 'rpdf') await exportReceiptsPdf(r);
       else if (kind === 'zip') await exportReceiptsZip(r);
+      else if (kind === 'stmt') await exportStatementPdf(r);
+      else if (kind === 'stzip') await exportStatementFiles(r);
     } catch (e) { console.error(e); toast('Couldn’t build the file: ' + (e && e.message ? e.message : 'unknown error')); }
     setBusy(null);
   }
@@ -794,6 +1127,12 @@ function ExportSheet({ r, onClose }) {
         ${receipts.length === 0 ? html`<p class="small muted">No receipt photos on the charges in this report yet.</p>` : html`
           <${OutButton} ext="PDF" title="Receipts PDF" sub="Every receipt, two per page, numbered and labelled with date, type and amount" busy=${busy === 'rpdf'} disabled=${!!busy} onClick=${() => run('rpdf')} />
           <${OutButton} ext="ZIP" title="Receipt files" sub="Each receipt as its own file, named by number, date, type and amount" busy=${busy === 'zip'} disabled=${!!busy} onClick=${() => run('zip')} />`}
+      </div>`}
+      ${!isPd && html`<div class="out-group">
+        <span class="caps muted">Bank statement${(r.statements || []).length ? ' · ' + plural(r.statements.length, 'page') : ''}</span>
+        ${!(r.statements || []).length ? html`<p class="small muted">No statement pages on this report. Add them under Bank statement to download them here.</p>`
+          : html`<${OutButton} ext="PDF" title="Bank statement PDF" sub=${(stTicked ? 'The ' + plural(stTicked, 'statement charge') + ' on the claim, each with its report charge, then ' : 'Your ') + 'statement pages'} busy=${busy === 'stmt'} disabled=${!!busy} onClick=${() => run('stmt')} />
+            <${OutButton} ext="ZIP" title="Statement files" sub="Your statements as you uploaded them: PDFs as they were, screenshots and photos as pictures" busy=${busy === 'stzip'} disabled=${!!busy} onClick=${() => run('stzip')} />`}
       </div>`}
       <p class="faint small">File name: ${C.fileBase(r)}</p>
     </div>
