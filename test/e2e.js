@@ -290,11 +290,14 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
 
   console.log('S: a bank statement on an itemized report');
   {
+    const UBER = { kind: 'receipt', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, payment: 'Visa 4412' }] };
     const SAM = { id: 'u_sam', level: 'interact', signedIn: true, R: [
-      { kind: 'receipt', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, payment: 'Visa 4412' }] },
+      UBER,
       { kind: 'statement', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 36.93, currency: 'CAD' }] },
+      UBER,
     ] };
     const { ctx, page, errors } = await open(browser, { who: SAM });
+    const rowsText = () => page.$$eval('.charge-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
     await page.waitForSelector('text=New itemized report');
     await page.click('text=New itemized report');
     await page.fill('#it-name', 'Sam Lee');
@@ -302,18 +305,22 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
     await page.waitForFunction(() => document.querySelectorAll('.charge-row').length === 1 && !/Reading receipt|Adding photo/.test(document.body.innerText), null, { timeout: 30000 });
     await page.setInputFiles('#st-up', path.join(FIX, 'statement.png'));
-    await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && !/Reading statement|Adding page/.test(document.body.innerText), null, { timeout: 30000 });
-    const ticked = await page.$$eval('.stmt-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
-    check(ticked.length === 2 && /UBER/.test(ticked[0]) && /BUDGET/.test(ticked[1]), 'the marked lines are on the claim; the coffee and the payment aren’t: ' + JSON.stringify(ticked));
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && !/Reading statement|Adding page/.test(document.body.innerText) && document.querySelectorAll('.charge-row').length === 2, null, { timeout: 30000 });
+    const lines = await page.$$eval('.stmt-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+    check(lines.length === 2 && /UBER/.test(lines[0]) && /BUDGET/.test(lines[1]), 'the marked lines are on the report; the coffee and the payment aren’t: ' + JSON.stringify(lines));
     check(await page.isVisible('text=Show all 4 lines'), 'the other lines are a tap away');
-    check(/On the report: Taxi \/ Uber/.test(ticked[0]), 'the Uber line is paired with the Uber receipt by itself');
-    const uber = await page.$$eval('.charge-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
-    check(/CA\$36\.93/.test(uber[0]) && /On statement/.test(uber[0]), 'and the US-dollar receipt gets the CAD that posted, with no typing: ' + uber[0]);
-    check(/1 of 1 charge on the report is on your statement/.test(await page.innerText('.stmt-sum')), 'the report says every charge is on the statement');
-    await page.click('text=Add it to the report');
-    await page.waitForFunction(() => document.querySelectorAll('.charge-row').length === 2);
-    const rowsNow = await page.$$eval('.charge-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
-    check(rowsNow.some(t => /BUDGET RENT-A-CAR LAX/.test(t) && /980\.25/.test(t)), 'the rental on the statement is added to the report as a charge: ' + JSON.stringify(rowsNow));
+    check(/On the report: Taxi \/ Uber/.test(lines[0]) && /Receipt/.test(lines[0]), 'the Uber line is paired with the Uber receipt by itself');
+    let rows = await rowsText();
+    check(/CA\$36\.93/.test(rows[0]) && /On statement/.test(rows[0]), 'the US-dollar receipt gets the CAD that posted, with no typing: ' + rows[0]);
+    check(rows.some(t => /BUDGET RENT-A-CAR LAX/.test(t) && /980\.25/.test(t) && /No receipt/.test(t)), 'the rental on the statement, with no receipt, is still on the report: ' + JSON.stringify(rows));
+    const sum = await page.innerText('.stmt-sum');
+    check(/2 of 2 charges on the report are on your statement/.test(sum) && /Missing a receipt: May 10 BUDGET RENT-A-CAR LAX/.test(sum), 'and the missing receipt is pointed out: ' + sum);
+    check(/Missing receipts/.test(await page.innerText('.panel:has(h2:text("Totals"))')), 'in the totals too');
+    // the person attaches the rental receipt to that charge
+    await page.setInputFiles('.stmt-row:has-text("BUDGET") input[type=file]', path.join(FIX, 'rental.pdf'));
+    await page.waitForSelector('text=Receipt attached.');
+    await page.waitForFunction(() => !/No receipt|Missing a receipt/.test(document.body.innerText));
+    check(true, 'attaching the receipt clears the warning');
     await page.click('.charge-row >> text=BUDGET');
     await page.click('text=Details are correct');
     // a charge edited off the statement amount is flagged on both sides
@@ -324,38 +331,62 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     await page.click('text=Use CA$980.25 from the statement');
     await page.waitForFunction(() => !/Statement shows/.test(document.body.innerText));
     check(true, 'an amount that doesn’t match the statement is flagged, and one tap fixes it');
-    // a receipt with no statement line is flagged
+    // a charge with no statement line is flagged
     await page.click('text=Add without receipt');
     await page.waitForTimeout(300);
-    check(/Not on statement/.test(await page.innerText('.weeks, body')), 'a charge that isn’t on the statement is flagged');
+    const manual = (await rowsText()).find(t => /Date needed|Taxi/.test(t) && /Not on statement/.test(t));
+    check(!!manual && /No receipt/.test(manual), 'a charge that isn’t on the statement is flagged: ' + manual);
     await page.click('.charge-edit >> text=Delete');
     await page.click('.sheet[role=alertdialog] >> text=Delete charge');
     await page.waitForTimeout(900);
     const stored = [...servers.prod.entries()].filter(([k]) => k.startsWith('data/users/u_sam/app/reports/')).map(([, v]) => v);
     const st = stored[0] && stored[0].statements && stored[0].statements[0];
     const sc = stored[0] && stored[0].charges;
-    check(st && st.rows.length === 4 && st.rows.filter(x => x.chargeId).length === 2 && sc.find(c => c.vendor === 'Uber').cad === 36.93, 'the page, its lines and the pairings are saved with the report');
+    check(st && st.rows.length === 4 && st.rows.filter(x => x.chargeId).length === 2 && sc.length === 2 && sc.find(c => c.vendor === 'Uber').cad === 36.93 && sc.every(c => c.imageId), 'the page, its lines, the pairings and both receipts are saved with the report');
     await shot(page, 'S-statement');
     await page.click('.dock >> text=Download');
     await page.waitForSelector('text=Bank statement PDF');
-    check(await page.isVisible('text=Receipts · 1'), 'the statement isn’t one of the receipts');
-    const before = await page.evaluate(() => window.__downloads.length);
-    await page.click('text=Bank statement PDF');
-    await page.waitForFunction((x) => window.__downloads.length > x, before);
-    const dl = (await page.evaluate(() => window.__downloads)).pop();
-    const pdf = Buffer.from(dl.b64, 'base64');
-    fs.writeFileSync(path.join(OUT, 'S-' + dl.filename), pdf);
-    const pageCount = (pdf.toString('latin1').match(/\/Type \/Page[^s]/g) || []).length;
-    check(/Fabrikam Burbank Itemized Expenses .* Bank Statement\.pdf$/.test(dl.filename) && pdf.subarray(0, 5).toString() === '%PDF-' && pageCount === 2, 'downloads as its own PDF: ' + dl.filename + ' (' + pageCount + ' pages)');
+    check(await page.isVisible('text=Receipts · 2'), 'the statement isn’t one of the receipts');
+    const grab = async (t) => {
+      const before = await page.evaluate(() => window.__downloads.length);
+      await page.click(t);
+      await page.waitForFunction((x) => window.__downloads.length > x, before);
+      const d = (await page.evaluate(() => window.__downloads)).pop();
+      const buf = Buffer.from(d.b64, 'base64');
+      fs.writeFileSync(path.join(OUT, 'S-' + d.filename), buf);
+      return { name: d.filename, buf };
+    };
+    const pdf = await grab('text=Bank statement PDF');
+    const pageCount = (pdf.buf.toString('latin1').match(/\/Type \/Page[^s]/g) || []).length;
+    check(/Fabrikam Burbank Itemized Expenses .* Bank Statement\.pdf$/.test(pdf.name) && pdf.buf.subarray(0, 5).toString() === '%PDF-' && pageCount === 2, 'the statement downloads as its own PDF: ' + pdf.name + ' (' + pageCount + ' pages)');
+    const zf = await grab('text=Statement files');
+    const names = Object.keys((await JSZip.loadAsync(zf.buf)).files);
+    check(/Bank Statement files\.zip$/.test(zf.name) && names.length === 1 && /^Statement 01 - statement\.jpg$/.test(names[0]), 'and the statement as uploaded: ' + zf.name + ' → ' + names.join(', '));
     await page.click('[aria-label="Close"]');
     await page.click('[aria-label="Back to reports"]');
-    // A statement added with the receipts moves to its own section, and its ticked charges are added
+    // statement first, receipt after: the receipt joins the charge its line made
     await page.click('text=New itemized report');
-    await page.fill('#it-cust', 'Fabrikam statement only');
+    await page.fill('#it-cust', 'Fabrikam statement first');
     await page.setInputFiles('#it-up', path.join(FIX, 'statement.png'));
     await page.waitForSelector('text=That looks like a card statement');
     await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && document.querySelectorAll('.charge-row').length === 2, null, { timeout: 30000 });
-    check(true, 'a statement added with the receipts moves to Bank statement and its two ticked charges land on the report');
+    check(true, 'a statement added with the receipts moves to Bank statement, and its two charges go on the report');
+    await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
+    await page.waitForFunction(() => !/Reading receipt|Adding photo/.test(document.body.innerText) && document.querySelectorAll('.charge-row img').length === 1, null, { timeout: 30000 });
+    await page.waitForTimeout(200);
+    rows = await rowsText();
+    check(rows.length === 2 && rows.some(t => /Uber/.test(t) && /CA\$36\.93/.test(t) && !/No receipt/.test(t)), 'the Uber receipt joins the Uber charge from the statement, no duplicate: ' + JSON.stringify(rows));
+    // a PDF statement exports exactly as uploaded; the same lines on it aren't added twice
+    await page.setInputFiles('#st-up', path.join(FIX, 'rental.pdf'));
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-page').length === 3 && !/Reading statement|Adding page/.test(document.body.innerText), null, { timeout: 30000 }); // the PDF has two pages
+    check((await rowsText()).length === 2, 'the same lines on other pages don’t add charges');
+    await page.click('.dock >> text=Download');
+    const zf2 = await grab('text=Statement files');
+    const z2 = await JSZip.loadAsync(zf2.buf);
+    const n2 = Object.keys(z2.files);
+    const pdfIn = n2.find(n => /\.pdf$/.test(n));
+    check(n2.length === 2 && pdfIn && (await z2.file(pdfIn).async('nodebuffer')).equals(fs.readFileSync(path.join(FIX, 'rental.pdf'))), 'the PDF statement comes back byte for byte: ' + n2.join(', '));
+    await page.click('[aria-label="Close"]');
     check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
     await ctx.close();
   }

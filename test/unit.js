@@ -139,14 +139,19 @@ test('statements: each charge is paired with the line that posted, once', () => 
   const chk = C.statementCheck(r);
   assert.deepStrictEqual(chk.missing.map(c => c.id), ['c3', 'c5'], 'charges not on the statement');
   assert.strictEqual(chk.unlisted.length, 2); assert.strictEqual(chk.suggestions.length, 1);
-  // reconcile records the pairs and fills in the CAD that posted
-  const rr = C.reconcile(r);
+  // reconcile records the pairs, fills in the CAD that posted, and puts ticked lines on the report
+  let k = 0;
+  const rr = C.reconcile(r, () => 'n' + (++k));
   assert.strictEqual(rr.charges.find(c => c.id === 'c1').cad, 36.93);
   assert.strictEqual(rr.charges.find(c => c.id === 'c3').cad, null, 'a guess is never applied');
   const rows = rr.statements[0].rows;
   assert.strictEqual(rows.find(x => x.id === 'a').chargeId, 'c1');
   assert.strictEqual(rows.find(x => x.id === 'f').claim, true, 'a line paired with a charge is on the claim');
-  assert.strictEqual(C.reconcile(rr), rr, 'nothing more to do the second time');
+  const made2 = rr.charges.filter(c => c.fromStatement);
+  assert.deepStrictEqual(made2.map(c => [c.vendor, c.amount, c.imageId]), [['BUDGET RENT A CAR', 980.25, null], ['SHELL', 50, null]], 'ticked lines with no receipt still go on the report');
+  assert.strictEqual(rows.find(x => x.id === 'd').chargeId, null, 'the vendor-only guess is left for the person');
+  assert.deepStrictEqual(C.missingReceipts(rr).map(c => c.vendor), ['Uber', 'Budget', 'Lyft', 'Impark', 'Esso', 'BUDGET RENT A CAR', 'SHELL'], 'every charge without a photo');
+  assert.strictEqual(C.reconcile(rr, () => 'x'), rr, 'nothing more to do the second time');
   // an edited charge stays paired, and the difference shows
   const edited = { ...rr, charges: rr.charges.map(c => (c.id === 'c2' ? { ...c, amount: 990 } : c)) };
   const m = C.statementCheck(edited).mismatches;
@@ -155,14 +160,52 @@ test('statements: each charge is paired with the line that posted, once', () => 
   rr.statements.push({ ai: 'read', rows: [row('b2', '2026-05-11', 980.25, 'BUDGET RENT A CAR')] });
   assert.strictEqual(C.linkStatement(rr).get('b2').how, 'dupe');
   assert.ok(!C.statementList(rr).some(it => it.row.id === 'b2'), 'listed once in the PDF');
+  assert.strictEqual(C.reconcile(rr, () => 'y').charges.length, rr.charges.length, 'and isn’t added again');
   const made = C.chargeFromRow(r.statements[0].rows[4], 'c9');
   assert.strictEqual(made.amount, 50); assert.strictEqual(made.currency, 'CAD'); assert.strictEqual(made.checked, false); assert.strictEqual(made.imageId, null);
+});
+test('statements: a receipt added after the statement joins the charge its line made', () => {
+  let k = 0;
+  const id = () => 'n' + (++k);
+  const line = (rid, date, amount, description, extra) => ({ id: rid, date, amount, description, currency: 'CAD', claim: true, chargeId: null, foreign: null, category: 'taxi', ...extra });
+  let r = { type: 'itemized', charges: [], statements: [{ ai: 'read', rows: [
+    line('a', '2026-04-29', 36.93, 'UBER *TRIP', { foreign: { amount: 26.85, currency: 'USD' } }),
+    line('b', '2026-05-10', 72.15, 'SHELL 57444', { category: 'fuel' }),
+    line('c', '2026-05-03', 19.40, 'LYFT *RIDE'),
+  ] }] };
+  r = C.reconcile(r, id);
+  assert.strictEqual(r.charges.length, 3); assert.strictEqual(C.missingReceipts(r).length, 3);
+  const approvedId = r.charges[1].id;
+  r = { ...r, charges: r.charges.map(c => (c.id === approvedId ? { ...c, approved: true } : c)) };
+  // the Uber receipt (US dollars) and the Shell receipt (CAD) arrive
+  r = { ...r, charges: [...r.charges,
+    { id: 'R1', date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, imageId: 'img1', ai: 'read' },
+    { id: 'R2', date: '2026-05-10', vendor: 'Shell', category: 'fuel', amount: 72.15, currency: 'CAD', imageId: 'img2', ai: 'read' },
+    { id: 'R3', date: '2026-05-03', vendor: 'Lyft', category: 'taxi', amount: 14.10, currency: 'USD', cad: null, imageId: 'img3', ai: 'read' },
+    { id: 'R4', date: '2026-05-12', vendor: 'Air Canada', category: 'airfare', amount: 30, currency: 'CAD', imageId: 'img4', ai: 'reading' }] };
+  r = C.reconcile(r, id);
+  const uber = r.charges.find(c => c.id === 'R1');
+  assert.ok(uber && uber.cad === 36.93 && uber.imageId === 'img1', 'the receipt joins its line’s charge, with the CAD that posted');
+  assert.strictEqual(r.charges.find(c => c.id === 'R2').approved, true, 'an OK already given carries over');
+  assert.strictEqual(r.charges.filter(c => /UBER|SHELL/.test(c.vendor)).length, 0, 'no duplicate charges left behind');
+  assert.deepStrictEqual(r.statements[0].rows.map(x => x.chargeId).slice(0, 2), ['R1', 'R2']);
+  assert.ok(r.charges.some(c => c.id === 'R4'), 'a receipt still being read is left alone');
+  // the Lyft receipt shows no USD amount on the line: offered, not applied
+  const offers = C.receiptSuggestions(r);
+  assert.strictEqual(offers.length, 1); assert.strictEqual(offers[0].receipt.id, 'R3');
+  r = C.reconcile(C.attachReceipt(r, offers[0].charge.id, 'R3'), id);
+  const lyft = r.charges.find(c => c.id === 'R3');
+  assert.ok(lyft.cad === 19.40 && lyft.imageId === 'img3');
+  assert.deepStrictEqual(C.missingReceipts(r).map(c => c.id), [], 'no receipts missing now');
+  assert.strictEqual(r.charges.length, 4);
 });
 test('statements: stored pages are validated on load', () => {
   const r = C.cleanReport({ id: 'r1', type: 'itemized', charges: [{ id: 'c1', category: 'taxi' }], statements: [
     { id: 'p1', imageId: 'i1', ai: 'reading', marks: [{ x: 0.1, y: 0.1, w: 0.5, h: 0.05 }],
       rows: [{ id: 's1', description: 'card 4111 1111 1111 1111', amount: 5, claim: true, chargeId: 'c1' }, { id: 's2', amount: 5, claim: true, chargeId: 'gone' }, { id: '../x' }] },
     { id: 'bad/id' }, 'junk'] });
+  assert.strictEqual(r.statements[0].group, 'p1'); assert.strictEqual(r.statements[0].orig, false);
+  assert.strictEqual(C.cleanReport({ id: 'r3', type: 'itemized', charges: [{ id: 'c1', fromStatement: true }, { id: 'c2', fromStatement: 'yes' }] }).charges.map(c => c.fromStatement).join(), 'true,false');
   assert.strictEqual(r.statements.length, 1);
   const p = r.statements[0];
   assert.strictEqual(p.ai, 'failed'); assert.match(p.aiNote, /interrupted/);
