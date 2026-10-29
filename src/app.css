@@ -308,5 +308,7 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .stmt-sum.ok { background: var(--ok-bg); } .stmt-sum.ok svg { color: var(--ok); }
 .stmt-sum.warn { background: var(--warn-bg); } .stmt-sum.warn svg { color: var(--warn); }
 .stmt-sum svg { flex: none; margin-top: 1px; }
+.no-receipt { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
+.stmt-state { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .stmt-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
 .stmt-viewer { width: min(760px, 100%); }

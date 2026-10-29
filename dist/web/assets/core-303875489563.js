@@ -822,7 +822,7 @@
       amount: num(c.amount), currency: typeof c.currency === 'string' && /^[A-Z]{3}$/.test(c.currency) ? c.currency : null, cad: num(c.cad),
       approved: c.approved === true, imageId: typeof c.imageId === 'string' && ID.test(c.imageId) ? c.imageId : null,
       ai: interrupted ? 'failed' : (c.ai === 'read' || c.ai === 'failed' ? c.ai : null), checked: c.checked === true,
-      payment: maskPayment(str(c.payment, 40)),
+      payment: maskPayment(str(c.payment, 40)), fromStatement: c.fromStatement === true,
       aiNote: interrupted ? 'Reading this receipt was interrupted. Fill in the details from the photo.' : str(c.aiNote, 200),
     };
   }
@@ -1011,35 +1011,105 @@
     const of = (how) => rows.filter(x => links.get(x.id) && links.get(x.id).how === how);
     return { links, onStatement, ready, missing, unlisted: of('none'), suggestions: of('cad'), mismatches: [...onStatement.values()].filter(x => x.mismatch) };
   }
-  // Records the pairs found by amount, so they hold if a charge is edited later, and fills in the CAD
-  // for a foreign-currency charge from the line that posted. Returns the same report when nothing changes.
-  function reconcile(r) {
+  const hasReceipt = (c) => !!c.imageId;
+  const isBusy = (c) => c.ai === 'processing' || c.ai === 'reading';
+  const allRows = (r) => (r.statements || []).flatMap(p => p.rows || []);
+  // A charge and a statement line are the same transaction: the same CAD within 3 days, or the line
+  // shows the receipt's original foreign amount
+  function sameTransaction(c, row) {
+    if (row.amount === null || !near(c.date, row.date, 3)) return false;
+    const v = chargeCAD(c);
+    if (v !== null && Math.abs(v - row.amount) < 0.005) return true;
+    return !!(row.foreign && isFx(c) && c.currency === row.foreign.currency && c.amount !== null && Math.abs(row.foreign.amount - c.amount) < 0.005);
+  }
+  // A receipt joins the charge its statement line put on the report: the receipt's details and photo,
+  // the CAD that posted (for a foreign-currency receipt), and the OK already given, as one charge.
+  function attachReceipt(r, stmtChargeId, receiptChargeId) {
+    const S = (r.charges || []).find(c => c.id === stmtChargeId), R = (r.charges || []).find(c => c.id === receiptChargeId);
+    if (!S || !R || S === R) return r;
+    const line = allRows(r).find(x => x.chargeId === S.id);
+    const cad = isFx(R) && (R.cad === null || R.cad === undefined) && line && (line.currency || 'CAD') === 'CAD' ? line.amount : R.cad;
+    const merged = { ...R, cad, date: R.date || S.date, category: R.category || S.category, approved: !!(R.approved || S.approved), fromStatement: false };
+    return {
+      ...r,
+      charges: r.charges.filter(c => c.id !== R.id).map(c => (c.id === S.id ? merged : c)),
+      statements: r.statements.map(p => (p.rows.some(x => x.chargeId === S.id) ? { ...p, rows: p.rows.map(x => (x.chargeId === S.id ? { ...x, chargeId: R.id, claim: true } : x)) } : p)),
+    };
+  }
+  // Keeps the report and its statement in step, on every change:
+  //   1. a receipt that matches a line already on the report (as a charge with no receipt) joins that charge
+  //   2. charges and lines with the same amount are paired, and a foreign-currency receipt gets the CAD
+  //      that posted
+  //   3. a ticked line that isn't on the report goes on it, as a charge with no receipt
+  // Returns the same report when nothing changes.
+  let idSeq = 0;
+  const defaultId = () => 'c' + Date.now().toString(36) + (idSeq++).toString(36) + Math.random().toString(36).slice(2, 5);
+  function reconcile(r, newId = defaultId) {
     if (!r || r.type !== 'itemized' || !(r.statements || []).length) return r;
-    const links = linkStatement(r);
-    let changed = false;
+    let out = r;
+    // 1.
+    for (const row of allRows(out)) {
+      if (!row.chargeId) continue;
+      const S = out.charges.find(c => c.id === row.chargeId);
+      if (!S || hasReceipt(S) || !S.fromStatement) continue;
+      const linked = new Set(allRows(out).map(x => x.chargeId).filter(Boolean));
+      const R = out.charges.find(c => c.id !== S.id && hasReceipt(c) && !isBusy(c) && !linked.has(c.id) && sameTransaction(c, row));
+      if (R) out = attachReceipt(out, S.id, R.id);
+    }
+    // 2.
+    let links = linkStatement(out);
     const fill = new Map();
-    const statements = r.statements.map(p => {
+    let changed = out !== r;
+    const pairRows = (fn) => out.statements.map(p => {
       let pc = false;
-      const rows = (p.rows || []).map(row => {
-        const l = links.get(row.id);
-        if (!l || !PAIRED.includes(l.how)) return row;
-        if (l.how === 'fx' && (row.currency || 'CAD') === 'CAD' && (l.charge.cad === null || l.charge.cad === undefined)) fill.set(l.charge.id, row.amount);
-        if (row.chargeId === l.charge.id && row.claim) return row;
-        pc = true;
-        return { ...row, claim: true, chargeId: l.charge.id };
-      });
+      const rows = (p.rows || []).map(row => { const n = fn(row); if (n !== row) pc = true; return n; });
       if (pc) changed = true;
       return pc ? { ...p, rows } : p;
     });
-    if (!changed && !fill.size) return r;
-    const charges = fill.size ? r.charges.map(c => (fill.has(c.id) ? { ...c, cad: fill.get(c.id) } : c)) : r.charges;
-    return { ...r, charges, statements };
+    let statements = pairRows(row => {
+      const l = links.get(row.id);
+      if (!l || !PAIRED.includes(l.how)) return row;
+      if (l.how === 'fx' && (row.currency || 'CAD') === 'CAD' && (l.charge.cad === null || l.charge.cad === undefined)) fill.set(l.charge.id, row.amount);
+      return row.chargeId === l.charge.id && row.claim ? row : { ...row, claim: true, chargeId: l.charge.id };
+    });
+    let charges = fill.size ? out.charges.map(c => (fill.has(c.id) ? { ...c, cad: fill.get(c.id) } : c)) : out.charges;
+    if (fill.size) changed = true;
+    out = { ...out, charges, statements };
+    // 3.
+    links = linkStatement(out);
+    const added = [];
+    statements = pairRows(row => {
+      const l = links.get(row.id);
+      if (!l || l.how !== 'none' || row.amount === null) return row;
+      const id = newId();
+      added.push(chargeFromRow(row, id));
+      return { ...row, chargeId: id };
+    });
+    if (added.length) out = { ...out, charges: [...out.charges, ...added], statements };
+    return changed || added.length ? out : r;
   }
-  // The charge a ticked row becomes when it isn't on the report yet
+  // Receipts the report is missing: every charge with no receipt photo, wherever it came from
+  function missingReceipts(r) { return (r.charges || []).filter(c => !hasReceipt(c) && !isBusy(c)); }
+  // A ticked line on the report as a charge with no receipt, and a receipt that isn't on the statement,
+  // with the same vendor within 3 days but no amount to prove they're the same: offered, not applied
+  function receiptSuggestions(r) {
+    const rows = allRows(r);
+    const linked = new Set(rows.map(x => x.chargeId).filter(Boolean));
+    const out = [];
+    for (const row of rows) {
+      const S = row.chargeId && (r.charges || []).find(c => c.id === row.chargeId);
+      if (!S || hasReceipt(S) || !S.fromStatement) continue;
+      const cands = (r.charges || []).filter(c => hasReceipt(c) && !isBusy(c) && !linked.has(c.id) && near(c.date, row.date, 3) && sameVendor(c.vendor, row.description));
+      if (cands.length === 1 && !out.some(x => x.receipt.id === cands[0].id)) out.push({ row, charge: S, receipt: cands[0] });
+    }
+    return out;
+  }
+  // The charge a ticked line becomes when it isn't on the report yet
   function chargeFromRow(row, id) {
     const cur = row.currency || 'CAD';
     return { id, date: isISO(row.date) ? row.date : null, vendor: String(row.description || '').slice(0, 60), category: CAT[row.category] ? row.category : '',
-      amount: row.amount, currency: cur, cad: null, approved: false, imageId: null, ai: 'read', checked: false, payment: '', aiNote: 'From your card statement. Check the details, then confirm.' };
+      amount: row.amount, currency: cur, cad: null, approved: false, imageId: null, ai: 'read', checked: false, payment: '', fromStatement: true,
+      aiNote: 'From your card statement, with no receipt yet. Check the details, and attach the receipt if you have it.' };
   }
   // Rows for the statement PDF's list: every row on the claim (ticked or paired), in date order, with
   // the charge it corresponds to
@@ -1094,7 +1164,7 @@
         const r = it.row, c = it.charge;
         const v = c ? chargeCAD(c) : null;
         const off = c && (r.currency || 'CAD') === 'CAD' && v !== null && Math.abs(v - r.amount) >= 0.005;
-        const claimAs = c ? (CAT[c.category] ? CAT[c.category].label : 'Charge') + (c.vendor ? ', ' + c.vendor : '') + (isISO(c.date) ? ', week ending ' + fmtDDMonYY(saturdayOf(c.date)) : '') + (off ? '. The report has ' + amt(v, 'CAD') : '') : 'Not on the report';
+        const claimAs = c ? (CAT[c.category] ? CAT[c.category].label : 'Charge') + (c.vendor ? ', ' + c.vendor : '') + (isISO(c.date) ? ', week ending ' + fmtDDMonYY(saturdayOf(c.date)) : '') + (off ? '. The report has ' + amt(v, 'CAD') : '') + (c.imageId ? '' : '. No receipt') : 'Not on the report';
         const desc = doc.splitTextToSize((r.description || '—') + (r.foreign ? ' (' + r.foreign.currency + ' ' + r.foreign.amount.toFixed(2) + ')' : ''), cols[1].w - 6);
         const claim = doc.splitTextToSize(claimAs + ' · page ' + it.page, cols[3].w - 4);
         const h = Math.max(desc.length, claim.length) * 10.5 + 4;
@@ -1103,7 +1173,7 @@
         doc.text(r.date ? fmtNice(r.date) : '—', cols[0].x + 2, y);
         desc.forEach((t, k) => doc.text(t, cols[1].x + 2, y + k * 10.5));
         doc.text(r.amount !== null ? amt(r.amount, r.currency) : '—', cols[2].x + cols[2].w, y, { align: 'right' });
-        if (!c || off) doc.setTextColor(170, 60, 40);
+        if (!c || off || !c.imageId) doc.setTextColor(170, 60, 40);
         claim.forEach((t, k) => doc.text(t, cols[3].x + 2, y + k * 10.5));
         doc.setDrawColor(225, 225, 225); doc.line(M, y + h - 8, PW - M, y + h - 8);
         y += h;
@@ -1150,6 +1220,7 @@
         chargeId: typeof r.chargeId === 'string' && ID.test(r.chargeId) ? r.chargeId : null, source: r.source === 'you' ? 'you' : 'ai' };
     }).filter(Boolean);
     return { id: p.id, imageId: typeof p.imageId === 'string' && ID.test(p.imageId) ? p.imageId : null, name: str(p.name, 80),
+      group: typeof p.group === 'string' && ID.test(p.group) ? p.group : p.id, orig: p.orig === true,
       w: num(p.w) || 0, h: num(p.h) || 0, card: maskPayment(str(p.card, 40)),
       ai: interrupted ? 'failed' : (p.ai === 'read' || p.ai === 'failed' ? p.ai : null),
       aiNote: interrupted ? 'Reading this page was interrupted. Tick and fill in the charges yourself.' : str(p.aiNote, 200), rows };
@@ -1163,7 +1234,7 @@
     chargeCAD, chargeIssue, itemizedProblems, itemizedWeeks, itemizedSummary, itemizedCells, itemizedXlsx,
     fileBase, safeName, receiptList, formatCell, drawSheet, pdfForms, pdfReceipts,
     AI_PROMPT, normalizeAi, maskPayment, cleanReport, cleanCharge, cleanSettings,
-    STATEMENT_PROMPT, normalizeStatement, linkStatement, statementCheck, reconcile, chargeFromRow, statementList, pdfStatement, cleanStatementPage,
+    STATEMENT_PROMPT, normalizeStatement, linkStatement, statementCheck, reconcile, attachReceipt, missingReceipts, receiptSuggestions, chargeFromRow, statementList, pdfStatement, cleanStatementPage,
     _internal: { parseSheet, serializeSheet, SST, applyCell },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

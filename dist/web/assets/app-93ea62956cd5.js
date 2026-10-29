@@ -97,7 +97,7 @@ const Model = {
   update(id, fn) {
     const cur = this.get(id); if (!cur) return;
     let next = fn(cur); if (!next || next === cur) return;
-    next = C.reconcile(next); // each charge stays paired with its statement line
+    next = C.reconcile(next, () => uid('c')); // the report and its statement stay in step
     next.updatedAt = Date.now();
     this.reports = this.reports.map(r => (r.id === id ? next : r));
     schedule(next.id); emit();
@@ -262,8 +262,8 @@ async function runAI({ reportId, chargeId, blobs, imageId }) {
 /* ---------- bank statements ---------- */
 function patchPage(r, pid, fn) { return { ...r, statements: (r.statements || []).map(p => (p.id === pid ? fn(p) : p)) }; }
 function patchRow(r, pid, rid, patch) { return patchPage(r, pid, p => ({ ...p, rows: p.rows.map(x => (x.id === rid ? { ...x, ...patch } : x)) })); }
-// A card statement added with the receipts moves to its own section, and the charges ticked on it are
-// added to the report, as before.
+// A card statement added with the receipts moves to its own section (its ticked charges go on the
+// report from there, like any statement's).
 function moveToStatements(reportId, chargeId, imageId, blobs) {
   const pageId = uid('p');
   Model.update(reportId, r => {
@@ -273,9 +273,9 @@ function moveToStatements(reportId, chargeId, imageId, blobs) {
   });
   toast('That looks like a card statement, so it’s under Bank statement now.');
   Svc.store.getImage(imageId).then(img => { if (img) Model.update(reportId, r => patchPage(r, pageId, p => ({ ...p, w: img.w, h: img.h }))); }).catch(() => {});
-  queueAI({ reportId, pageId, blobs, imageId, addClaimed: true });
+  queueAI({ reportId, pageId, blobs, imageId });
 }
-async function runStatementAI({ reportId, pageId, blobs, imageId, addClaimed }) {
+async function runStatementAI({ reportId, pageId, blobs, imageId }) {
   const set = (fn) => Model.update(reportId, r => patchPage(r, pageId, fn));
   if (!aiOn()) { set(p => ({ ...p, ai: null })); return; }
   try {
@@ -285,33 +285,11 @@ async function runStatementAI({ reportId, pageId, blobs, imageId, addClaimed }) 
     const note = res.kind === 'not_statement' ? 'This doesn’t look like a card statement. Tick and add the charges yourself, or remove the page.'
       : !rows.length ? 'Claude couldn’t find any charges on this page. Add them yourself, or retake the photo.' : '';
     set(p => ({ ...p, ai: rows.length ? 'read' : 'failed', aiNote: note, card: res.card || p.card, rows }));
-    if (addClaimed) addUnlisted(reportId, pageId);
   } catch (e) {
     if (PLAT.aiFailed(Svc, e)) emit();
     if (PLAT.classify(e) === 'signin') { lostAccess('signin'); return; }
     set(p => ({ ...p, ai: 'failed', aiNote: aiErrorText(e).replace('this receipt', 'this statement page').replace('Fill in the details from the photo.', 'Tick and add the charges yourself.') }));
   }
-}
-// Adds the ticked rows that aren't on the report yet as charges (on one page, or all pages)
-function addUnlisted(reportId, pageId) {
-  let n = 0;
-  Model.update(reportId, r => {
-    const links = C.linkStatement(r);
-    let charges = r.charges.slice(), statements = r.statements;
-    for (const p of r.statements || []) {
-      if (pageId && p.id !== pageId) continue;
-      for (const row of p.rows) {
-        const l = links.get(row.id);
-        if (!row.claim || !l || l.how !== 'none' || row.amount === null) continue;
-        const cid = uid('c');
-        charges.push(C.chargeFromRow(row, cid));
-        statements = statements.map(q => (q.id === p.id ? { ...q, rows: q.rows.map(x => (x.id === row.id ? { ...x, chargeId: cid } : x)) } : q));
-        n++;
-      }
-    }
-    return n ? { ...r, charges, statements } : r;
-  });
-  if (n) toast(plural(n, 'charge') + ' from your statement added to the report. Check ' + (n === 1 ? 'it' : 'them') + ' above.');
 }
 // Statement pages are kept sharper than receipts, so small print stays readable
 async function processStatementFile(file) {
@@ -322,7 +300,7 @@ async function processStatementFile(file) {
     try { src = await decodeImage(file); } catch (e) { throw new Error('That picture can’t be opened here. Try a JPEG or PNG screenshot.'); }
     if (src.width * src.height > 80e6) throw new Error('That image is too large to open (over 80 megapixels).');
     const out = await scaleToJpeg(src, 2400, 0.82);
-    return [{ blob: out.blob, w: out.w, h: out.h, name }];
+    return { pages: [{ blob: out.blob, w: out.w, h: out.h, name }], orig: null };
   }
   const lib = await loadPdfJs();
   const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), enableXfa: false, isEvalSupported: false }).promise;
@@ -338,7 +316,9 @@ async function processStatementFile(file) {
     await page.render({ canvasContext: g, viewport: vp }).promise;
     pages.push({ blob: await canvasBlob(cv, 0.82), w: cv.width, h: cv.height, name: name + (n > 1 ? ' p' + k : '') });
   }
-  return pages;
+  // The PDF itself is kept too (up to 6 MB), so the statement exports exactly as it was uploaded
+  const orig = file.size <= 6 * 1024 * 1024 ? { blob: file.slice(0, file.size, 'application/pdf'), name: file.name || 'statement.pdf', type: 'application/pdf' } : null;
+  return { pages, orig };
 }
 async function addStatementFiles(reportId, files) {
   const tooBig = [...files].filter(f => f.size > MAX_UPLOAD);
@@ -349,20 +329,21 @@ async function addStatementFiles(reportId, files) {
     const holder = uid('p');
     Model.update(reportId, r => ({ ...r, statements: [...(r.statements || []), { id: holder, imageId: null, name: String(file.name || 'Statement').slice(0, 60), w: 0, h: 0, card: '', ai: 'processing', aiNote: '', rows: [] }] }));
     try {
-      const pages = await processStatementFile(file);
+      const { pages, orig } = await processStatementFile(file);
       if (!Svc.store) return;
       const made = [];
       for (const pg of pages) {
         const imageId = uid('i');
-        try { await Svc.store.putImage(imageId, pg.blob, { w: pg.w, h: pg.h }, null); }
+        const withOrig = !made.length && orig;
+        try { await Svc.store.putImage(imageId, pg.blob, { w: pg.w, h: pg.h }, withOrig ? orig : null); }
         catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the statement page. Check your connection and add it again.'); }
-        made.push({ ...pg, imageId, id: made.length ? uid('p') : holder });
+        made.push({ ...pg, imageId, id: made.length ? uid('p') : holder, orig: !!withOrig });
       }
       const reading = aiOn();
       Model.update(reportId, r => {
         const at = (r.statements || []).findIndex(p => p.id === holder); if (at < 0) return r;
         const st = r.statements.slice();
-        st.splice(at, 1, ...made.map(m => ({ id: m.id, imageId: m.imageId, name: m.name, w: m.w, h: m.h, card: '', ai: reading ? 'reading' : null, aiNote: '', rows: [] })));
+        st.splice(at, 1, ...made.map(m => ({ id: m.id, group: holder, orig: m.orig, imageId: m.imageId, name: m.name, w: m.w, h: m.h, card: '', ai: reading ? 'reading' : null, aiNote: '', rows: [] })));
         return { ...r, statements: st };
       });
       if (reading) for (const m of made) queueAI({ reportId, pageId: m.id, blobs: [m.blob], imageId: m.imageId });
@@ -370,6 +351,46 @@ async function addStatementFiles(reportId, files) {
       Model.update(reportId, r => patchPage(r, holder, p => ({ ...p, ai: 'failed', aiNote: (e && e.message) || 'Couldn’t add that file.' })));
     }
   }
+}
+// The statements as uploaded: each PDF as it was, and each screenshot or photo as a picture
+async function statementFiles(r) {
+  const files = [], done = new Set();
+  for (const p of r.statements || []) {
+    if (!p.imageId || done.has(p.group || p.id)) continue;
+    const o = p.orig && Svc.store.getOriginal ? await Svc.store.getOriginal(p.imageId).catch(() => null) : null;
+    if (o && o.blob) { files.push({ blob: o.blob, ext: 'pdf', name: p.name.replace(/ p1$/, '') }); done.add(p.group || p.id); continue; }
+    const img = await Svc.store.getImage(p.imageId).catch(() => null);
+    if (img && img.blob) files.push({ blob: img.blob, ext: 'jpg', name: p.name });
+  }
+  return files.map((f, i) => ({ ...f, name: C.safeName('Statement ' + String(i + 1).padStart(2, '0') + (f.name ? ' - ' + f.name : '')) }));
+}
+async function exportStatementFiles(r) {
+  const files = await statementFiles(r);
+  if (!files.length) { toast('There are no statement pages on this report.'); return false; }
+  const zip = new window.JSZip();
+  for (const f of files) zip.file(f.name + '.' + f.ext, f.blob);
+  return saveFile(C.fileBase(r) + ' Bank Statement files.zip', await zip.generateAsync({ type: 'blob' }));
+}
+async function downloadStatementPage(p, original) {
+  if (original) {
+    const o = await Svc.store.getOriginal(p.imageId).catch(() => null);
+    if (o && o.blob) return saveFile(C.safeName(p.name.replace(/ p1$/, '') || 'Statement') + '.pdf', o.blob);
+  }
+  const img = await Svc.store.getImage(p.imageId).catch(() => null);
+  if (!img || !img.blob) { toast('Couldn’t load that page.'); return false; }
+  return saveFile(C.safeName(p.name || 'Statement page') + '.jpg', img.blob);
+}
+// A receipt for a charge that has none (for example one that came from the statement)
+async function attachReceiptFile(reportId, chargeId, file) {
+  if (file.size > MAX_UPLOAD) { toast((file.name || 'That file') + ' is over 25 MB.'); return; }
+  try {
+    const img = await processFile(file);
+    const imageId = uid('i');
+    try { await Svc.store.putImage(imageId, img.blob, { w: img.w, h: img.h }, img.orig); }
+    catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the receipt. Check your connection and try again.'); }
+    Model.update(reportId, r => patchCharge(r, chargeId, { imageId }));
+    toast('Receipt attached.');
+  } catch (e) { toast((e && e.message) || 'Couldn’t attach that receipt.'); }
 }
 async function exportStatementPdf(r) {
   const pages = [];
@@ -703,6 +724,7 @@ function ItemizedEditor({ r }) {
   }
   const weekTotal = (sat) => (sum.weeks.find(w => w.weekEnding === sat) || { total: 0 }).total;
   const chk = (r.statements || []).length ? C.statementCheck(r) : null;
+  const missingR = C.missingReceipts(r);
   const onSt = (c) => !chk ? null : chk.onStatement.has(c.id) ? (chk.onStatement.get(c.id).mismatch ? { state: 'mismatch', amount: chk.onStatement.get(c.id).row.amount } : { state: 'on' }) : chk.ready && c.ai !== 'reading' && c.ai !== 'processing' ? { state: 'missing' } : null;
   const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} st=${onSt(c)} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
 
@@ -758,6 +780,7 @@ function ItemizedEditor({ r }) {
           ${sum.weeks.length === 0 && html`<div class="row faint"><span>No complete charges yet</span><span>${cad(0)}</span></div>`}
           <div class="row tot"><span>Grand total</span><span>${cad(sum.total)}</span></div>
         </div>
+        ${missingR.length > 0 && html`<div class="left-off"><b class="small" style="color:var(--warn)">Missing receipts</b><ul class="plain small">${missingR.map(c => html`<li key=${c.id}><button class="linkbtn" onClick=${() => { setOpenId(c.id); setTimeout(() => { const el = document.querySelector('[aria-expanded="true"]'); if (el) el.scrollIntoView({ block: 'center' }); }, 50); }}>${label(c)}${C.chargeCAD(c) !== null ? ' · ' + cad(C.chargeCAD(c)) : ''}</button></li>`)}</ul><span class="small muted">These charges are on the report without a receipt. Attach one to each if you have it.</span></div>`}
         ${sum.left.length > 0 && html`<div class="left-off"><b class="small" style="color:var(--warn)">Not on the report yet</b><ul class="plain small">${sum.left.map(x => html`<li>${x.c.date ? C.fmtNice(x.c.date) : 'Undated'} ${x.c.category && C.CAT[x.c.category] ? '· ' + C.CAT[x.c.category].label : ''}${x.c.vendor ? ' · ' + x.c.vendor : ''}: ${x.issue}</li>`)}</ul></div>`}
       </div>
     </section>`}
@@ -784,6 +807,7 @@ function ChargeItem({ c, st, open, onToggle, reportId, onView }) {
     if (st && st.state === 'on') chips.push(html`<span class="chip ok"><${Icon} n="check" size=${12} />On statement</span>`);
     if (st && st.state === 'mismatch') chips.push(html`<span class="chip bad"><span class="dot"></span>Statement shows ${cad(st.amount)}</span>`);
     if (st && st.state === 'missing') chips.push(html`<span class="chip warn"><span class="dot"></span>Not on statement</span>`);
+    if (!c.imageId) chips.push(html`<span class="chip warn"><span class="dot"></span>No receipt</span>`);
   }
   return html`<div class="charge">
     <button class="charge-row" onClick=${onToggle} aria-expanded=${open}>
@@ -843,6 +867,7 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
       <//>`}
     </div>
     ${cat && !cat.q && html`<label class="check"><input type="checkbox" checked=${!!c.approved} onChange=${e => set({ approved: e.target.checked })} /><span><b>Include on this report.</b> ${cat.label} isn’t on the usual list (taxi, rental, baggage, fuel). Tick this only if it’s approved.</span></label>`}
+    ${!c.imageId && !busy && html`<div class="no-receipt"><span class="small">No receipt on this charge. It stays on the report; attach the receipt if you have it.</span><${AttachButton} reportId=${reportId} chargeId=${c.id} /></div>`}
     <div class="edit-actions">
       <button class="btn sm ghost danger" onClick=${del}><${Icon} n="trash" size=${18} />Delete</button>
       ${c.ai === 'read' && !c.checked
@@ -866,6 +891,7 @@ function ImageViewer({ c, onClose }) {
 }
 
 /* ---- bank statement ---- */
+const label = (c) => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'));
 function StatementSection({ r }) {
   const upRef = useRef(null), camRef = useRef(null);
   const [drag, setDrag] = useState(false);
@@ -873,27 +899,29 @@ function StatementSection({ r }) {
   const pages = r.statements || [];
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const chk = C.statementCheck(r);
-  const unlisted = chk.unlisted.length;
+  const noReceipt = C.missingReceipts(r);
+  const offers = C.receiptSuggestions(r);
   const add = (files) => { if (files && files.length) addStatementFiles(r.id, files); };
+  const trouble = chk.missing.length || chk.mismatches.length || noReceipt.length;
   return html`<section class=${'panel stmt' + (drag ? ' drag' : '')} aria-labelledby="stmt-h"
       onDragOver=${e => { e.preventDefault(); setDrag(true); }} onDragLeave=${() => setDrag(false)}
       onDrop=${e => { e.preventDefault(); setDrag(false); if (e.dataTransfer) add(e.dataTransfer.files); }}>
     <div class="panel-h"><h2 id="stmt-h">Bank statement</h2>${pages.length > 0 && html`<span class="muted small">${plural(pages.length, 'page')}</span>`}</div>
     <div class="panel-b">
-      <p class="muted small">Add the card statement pages that show these charges, as screenshots, photos or a PDF. Each charge on the report is matched to the line that posted to your card, and a receipt in another currency gets its CAD amount from it. The pages download as their own PDF, separate from the receipts.</p>
+      <p class="muted small">Add the card statement pages that show these charges, as screenshots, photos or a PDF. Every charge ticked on the statement goes on the report, with or without a receipt. Each one is matched to its receipt, and a receipt in another currency gets its CAD amount from the statement. The statement downloads on its own, separate from the receipts.</p>
       <div class="capture-btns">
         ${touch && html`<button class="btn" onClick=${() => camRef.current && camRef.current.click()}><${Icon} n="camera" />Photograph a page</button>`}
         <button class="btn" onClick=${() => upRef.current && upRef.current.click()}><${Icon} n="upload" />Add statement pages</button>
       </div>
       <input ref=${camRef} id="st-cam" class="vh" type="file" accept="image/*" capture="environment" onChange=${e => { add(e.target.files); e.target.value = ''; }} />
       <input ref=${upRef} id="st-up" class="vh" type="file" accept="image/*,application/pdf,.docx" multiple onChange=${e => { add(e.target.files); e.target.value = ''; }} />
-      ${chk.ready && r.charges.length > 0 && html`<div class=${'stmt-sum' + (chk.missing.length || chk.mismatches.length ? ' warn' : ' ok')}>
-        <${Icon} n=${chk.missing.length || chk.mismatches.length ? 'alert' : 'check'} size=${18} />
-        <span>${chk.onStatement.size} of ${plural(r.charges.length, 'charge')} on the report ${chk.onStatement.size === 1 ? 'is' : 'are'} on your statement.${chk.mismatches.length ? ' ' + plural(chk.mismatches.length, 'amount') + ' ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match.' : ''}${chk.missing.length ? ' Not found: ' + chk.missing.map(c => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'))).join(', ') + '.' : ''}</span>
+      ${chk.ready && r.charges.length > 0 && html`<div class=${'stmt-sum' + (trouble ? ' warn' : ' ok')}>
+        <${Icon} n=${trouble ? 'alert' : 'check'} size=${18} />
+        <span>${chk.onStatement.size} of ${plural(r.charges.length, 'charge')} on the report ${chk.onStatement.size === 1 ? 'is' : 'are'} on your statement.${chk.mismatches.length ? ' ' + plural(chk.mismatches.length, 'amount') + ' ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match.' : ''}${chk.missing.length ? ' Not on the statement: ' + chk.missing.map(label).join(', ') + '.' : ''}${noReceipt.length ? ' Missing ' + (noReceipt.length === 1 ? 'a receipt' : plural(noReceipt.length, 'receipt')) + ': ' + noReceipt.map(label).join(', ') + '.' : ''}</span>
       </div>`}
+      ${offers.map(o => html`<div class="stmt-bar" key=${o.receipt.id}><span class="small">Is your ${o.receipt.vendor || 'receipt'} receipt (${o.receipt.currency} ${C.round2(o.receipt.amount || 0).toFixed(2)}, ${o.receipt.date ? C.fmtMonD(o.receipt.date) : 'undated'}) for ${o.row.description || 'the statement line'} (${cad(o.row.amount)}, ${o.row.date ? C.fmtMonD(o.row.date) : 'undated'})?</span>
+        <button class="btn sm primary" onClick=${() => Model.update(r.id, q => C.attachReceipt(q, o.charge.id, o.receipt.id))}>Yes, match them</button></div>`)}
       ${pages.map((p, i) => html`<${StatementPage} key=${p.id} r=${r} p=${p} n=${i + 1} links=${chk.links} onView=${() => setViewer(p.id)} />`)}
-      ${unlisted > 0 && html`<div class="stmt-bar"><span class="small">${plural(unlisted, 'ticked statement charge')} ${unlisted === 1 ? 'isn’t' : 'aren’t'} on the report yet.</span>
-        <button class="btn sm primary" onClick=${() => addUnlisted(r.id, null)}><${Icon} n="plus" size=${16} />Add ${unlisted === 1 ? 'it' : 'them'} to the report</button></div>`}
     </div>
     ${viewer && pages.some(p => p.id === viewer) && html`<${StatementViewer} p=${pages.find(p => p.id === viewer)} onClose=${() => setViewer(null)} />`}
   </section>`;
@@ -911,7 +939,7 @@ function StatementPage({ r, p, n, links, onView }) {
     const ok = await askConfirm({ title: 'Remove this statement page?', body: 'The page comes off the report. Charges already on the report stay on it.', yes: 'Remove page', danger: true });
     if (!ok) return;
     Model.update(r.id, x => ({ ...x, statements: x.statements.filter(q => q.id !== p.id) }));
-    if (p.imageId && Svc.store) Svc.store.deleteImage(p.imageId).catch(() => {});
+    if (p.imageId && Svc.store && !(r.statements || []).some(q => q.id !== p.id && q.imageId === p.imageId)) Svc.store.deleteImage(p.imageId).catch(() => {});
   }
   function addRow() {
     const id = uid('s');
@@ -921,7 +949,7 @@ function StatementPage({ r, p, n, links, onView }) {
   let status;
   if (p.ai === 'processing') status = html`<span class="chip info"><span class="spin"></span>Adding page</span>`;
   else if (p.ai === 'reading') status = html`<span class="chip info"><span class="spin"></span>Reading statement</span>`;
-  else if (p.rows.length) status = html`<span class="chip info">${plural(claimed.length, 'charge')} on the claim, of ${p.rows.length} lines</span>`;
+  else if (p.rows.length) status = html`<span class="chip info">${plural(claimed.length, 'charge')} on the report, of ${p.rows.length} lines</span>`;
   return html`<div class="stmt-page">
     <div class="stmt-head">
       <button class="thumb stmt-thumb" onClick=${onView} disabled=${!url} aria-label=${'View statement page ' + n}>${url ? html`<img src=${url} alt="" />` : busy ? html`<span class="spin"></span>` : html`<${Icon} n="receipt" />`}</button>
@@ -934,10 +962,18 @@ function StatementPage({ r, p, n, links, onView }) {
     ${p.aiNote && html`<p class="small" style="color:var(--warn)">${p.aiNote}</p>`}
     ${shown.length > 0 && html`<ul class="stmt-rows">${shown.map(x => html`<${StatementRow} key=${x.id} r=${r} p=${p} x=${x} link=${links.get(x.id)} editing=${edit === x.id} onEdit=${() => setEdit(edit === x.id ? null : x.id)} />`)}</ul>`}
     <div class="row-btns">
-      ${p.rows.length > claimed.length && html`<button class="linkbtn" onClick=${() => setAll(!all)}>${all ? 'Show only charges on the claim' : 'Show all ' + p.rows.length + ' lines'}</button>`}
+      ${p.rows.length > claimed.length && html`<button class="linkbtn" onClick=${() => setAll(!all)}>${all ? 'Show only charges on the report' : 'Show all ' + p.rows.length + ' lines'}</button>`}
       ${!busy && html`<button class="linkbtn" onClick=${addRow}>Add a charge from this page</button>`}
     </div>
   </div>`;
+}
+function AttachButton({ reportId, chargeId, label }) {
+  const ref = useRef(null);
+  const [busy, setBusy] = useState(false);
+  return html`<span>
+    <button class="btn sm" disabled=${busy} onClick=${() => ref.current && ref.current.click()}><${Icon} n="receipt" size=${16} />${busy ? 'Attaching…' : label || 'Attach receipt'}</button>
+    <input ref=${ref} class="vh" type="file" accept="image/*,application/pdf" aria-label="Receipt to attach" onChange=${async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; setBusy(true); try { await attachReceiptFile(reportId, chargeId, f); } finally { setBusy(false); } }} />
+  </span>`;
 }
 function StatementRow({ r, p, x, link, editing, onEdit }) {
   const set = (patch) => Model.update(r.id, q => patchRow(q, p.id, x.id, patch));
@@ -945,23 +981,34 @@ function StatementRow({ r, p, x, link, editing, onEdit }) {
   const c = link && link.charge;
   const paired = link && PAIRED.includes(link.how);
   const what = c ? (C.CAT[c.category] ? C.CAT[c.category].label : 'charge') + (c.vendor ? ' · ' + c.vendor : '') : '';
+  // Ticking a line puts it on the report; unticking takes off the charge it made, if it has no receipt
+  function toggle(on) {
+    if (on) { set({ claim: true }); return; }
+    Model.update(r.id, q => {
+      const ch = x.chargeId && q.charges.find(y => y.id === x.chargeId);
+      const out = patchRow(q, p.id, x.id, { claim: false, chargeId: null });
+      return ch && !ch.imageId ? { ...out, charges: out.charges.filter(y => y.id !== ch.id) } : out;
+    });
+  }
+  const locked = paired && c && !!c.imageId; // paired with a receipt: delete the charge to take it off
   let state = null;
   if (paired) {
     const v = C.chargeCAD(c);
     const off = (x.currency || 'CAD') === 'CAD' && v !== null && Math.abs(v - x.amount) >= 0.005;
-    state = off
+    state = html`${off
       ? html`<span class="chip bad"><span class="dot"></span>The report has ${cad(v)} for ${what}</span>
           <button class="btn sm" onClick=${() => Model.update(r.id, q => patchCharge(q, c.id, c.currency === 'CAD' ? { amount: x.amount } : { cad: x.amount }))}>Use ${cad(x.amount)} from the statement</button>`
-      : html`<span class="chip ok"><${Icon} n="check" size=${14} />On the report: ${what}</span>`;
+      : html`<span class="chip ok"><${Icon} n="check" size=${14} />On the report: ${what}</span>`}
+      ${c.imageId ? html`<span class="chip ok"><${Icon} n="receipt" size=${12} />Receipt</span>` : html`<span class="chip warn"><span class="dot"></span>No receipt</span><${AttachButton} reportId=${r.id} chargeId=${c.id} />`}`;
   } else if (link && link.how === 'cad') {
     state = html`<button class="btn sm" onClick=${() => Model.update(r.id, q => patchRow(patchCharge(q, c.id, { cad: x.amount }), p.id, x.id, { chargeId: c.id }))}>
       Is this ${c.vendor || 'the charge'} (${c.currency} ${C.round2(c.amount || 0).toFixed(2)})? Use ${cad(x.amount)} as its CAD</button>`;
   } else if (link && link.how === 'dupe') state = html`<span class="chip info">Also on another page</span>`;
-  else if (x.claim && x.amount !== null) state = html`<span class="chip warn"><span class="dot"></span>Not on the report</span>`;
+  else if (x.claim && x.amount === null) state = html`<span class="chip warn"><span class="dot"></span>Add the amount to put it on the report</span>`;
   const fx = x.foreign ? x.foreign.currency + ' ' + x.foreign.amount.toFixed(2) : '';
   return html`<li class=${'stmt-row' + (x.claim || paired ? ' on' : '')}>
     <div class="stmt-line">
-      <input id=${id('claim')} type="checkbox" checked=${!!(x.claim || paired)} disabled=${x.credit || paired} aria-label=${'Claim ' + (x.description || 'this charge')} onChange=${e => set({ claim: e.target.checked })} />
+      <input id=${id('claim')} type="checkbox" checked=${!!(x.claim || paired)} disabled=${x.credit || locked} aria-label=${'Put ' + (x.description || 'this charge') + ' on the report'} onChange=${e => toggle(e.target.checked)} />
       <label for=${id('claim')} class="stmt-desc"><span class="d mono">${x.date ? C.fmtMonD(x.date) : '—'}</span><span>${x.description || html`<span class="faint">No description</span>`}${fx && html`<span class="faint"> · ${fx}</span>`}${x.credit && html`<span class="faint"> · credit</span>`}</span></label>
       <span class="mono stmt-amt">${x.amount !== null ? C.round2(x.amount).toFixed(2) : '—'}</span>
       <button class="icon-btn sm" onClick=${onEdit} aria-label=${'Edit ' + (x.description || 'this line')} aria-expanded=${editing}><${Icon} n="edit" size=${16} /></button>
@@ -971,19 +1018,25 @@ function StatementRow({ r, p, x, link, editing, onEdit }) {
       <${Field} id=${id('date')} label="Date"><input id=${id('date')} class="inp" type="date" value=${x.date || ''} onChange=${e => set({ date: e.target.value || null })} /><//>
       <${Field} id=${id('desc')} label="Description"><${TextInput} id=${id('desc')} value=${x.description} max=${60} onValue=${v => set({ description: v })} /><//>
       <${Field} id=${id('amt')} label=${'Amount (' + (x.currency || 'CAD') + ')'}><${MoneyInput} id=${id('amt')} value=${x.amount} onValue=${v => set({ amount: v })} /><//>
-      <${Field} id=${id('cat')} label="Type, if added to the report">
+      <${Field} id=${id('cat')} label="Type on the report">
         <select id=${id('cat')} class="inp" value=${x.category} onChange=${e => set({ category: e.target.value })}>${C.CATS.map(k => html`<option value=${k.key}>${k.label}</option>`)}</select>
       <//>
-      <div class="row-btns"><button class="btn sm" onClick=${onEdit}>Done</button>${x.source === 'you' && html`<button class="btn sm ghost danger" onClick=${() => Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, rows: pg.rows.filter(y => y.id !== x.id) })))}>Delete line</button>`}</div>
+      <div class="row-btns"><button class="btn sm" onClick=${onEdit}>Done</button>${x.source === 'you' && html`<button class="btn sm ghost danger" onClick=${() => { toggle(false); Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, rows: pg.rows.filter(y => y.id !== x.id) }))); }}>Delete line</button>`}</div>
     </div>`}
   </li>`;
 }
 function StatementViewer({ p, onClose }) {
   const url = useImageURL(p.imageId);
+  const [busy, setBusy] = useState(false);
+  const dl = async (orig) => { setBusy(true); try { await downloadStatementPage(p, orig); } finally { setBusy(false); } };
   return html`<div class="scrim" onClick=${e => { if (e.target === e.currentTarget) onClose(); }}>
     <div class="sheet viewer stmt-viewer" role="dialog" aria-label="Statement page">
       <div class="sheet-h"><h2>${p.name || 'Statement page'}</h2><button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
       ${url ? html`<img src=${url} alt="Statement page" />` : html`<div class="skel" style="height:300px"></div>`}
+      <div class="row-btns">
+        <button class="btn" disabled=${busy || !url} onClick=${() => dl(false)}><${Icon} n="download" />Download this page</button>
+        ${p.orig && html`<button class="btn" disabled=${busy} onClick=${() => dl(true)}><${Icon} n="download" />Download the PDF as uploaded</button>`}
+      </div>
     </div>
   </div>`;
 }
@@ -1018,6 +1071,8 @@ function ExportSheet({ r, onClose }) {
     if (fx) notes.push('CAD amount entered by you for ' + plural(fx, 'foreign-currency receipt') + '.');
     notes.push('HST columns left blank.');
     receipts = C.receiptList(r);
+    const noR = C.missingReceipts(r).filter(c => !C.chargeIssue(c));
+    if (noR.length) warns.push('Missing ' + (noR.length === 1 ? 'a receipt' : plural(noR.length, 'receipt')) + ': ' + noR.map(c => label(c)).join(', ') + '. ' + (noR.length === 1 ? 'It’s' : 'They’re') + ' on the report without one.');
     const pages = r.statements || [];
     const stReading = pages.filter(p => p.ai === 'reading' || p.ai === 'processing').length;
     if (stReading) warns.push(plural(stReading, 'statement page') + ' still being read.');
@@ -1025,7 +1080,7 @@ function ExportSheet({ r, onClose }) {
       const chk = C.statementCheck(r);
       if (chk.missing.length) warns.push(plural(chk.missing.length, 'charge') + ' on the report ' + (chk.missing.length === 1 ? 'isn’t' : 'aren’t') + ' on your bank statement: ' + chk.missing.map(c => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'))).join(', ') + '. Add the statement page that shows ' + (chk.missing.length === 1 ? 'it' : 'them') + '.');
       if (chk.mismatches.length) warns.push(plural(chk.mismatches.length, 'charge') + ' on the report ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match the amount on your statement. Fix ' + (chk.mismatches.length === 1 ? 'it' : 'them') + ' under Bank statement.');
-      if (chk.unlisted.length) warns.push(plural(chk.unlisted.length, 'charge') + ' ticked on your statement ' + (chk.unlisted.length === 1 ? 'isn’t' : 'aren’t') + ' on the report.');
+      if (chk.unlisted.length) warns.push(plural(chk.unlisted.length, 'line') + ' ticked on your statement ' + (chk.unlisted.length === 1 ? 'needs' : 'need') + ' an amount to go on the report.');
       if (chk.suggestions.length) warns.push('Your statement may show the CAD for ' + plural(chk.suggestions.length, 'foreign-currency charge') + '. Check under Bank statement.');
     }
   }
@@ -1040,6 +1095,7 @@ function ExportSheet({ r, onClose }) {
       else if (kind === 'rpdf') await exportReceiptsPdf(r);
       else if (kind === 'zip') await exportReceiptsZip(r);
       else if (kind === 'stmt') await exportStatementPdf(r);
+      else if (kind === 'stzip') await exportStatementFiles(r);
     } catch (e) { console.error(e); toast('Couldn’t build the file: ' + (e && e.message ? e.message : 'unknown error')); }
     setBusy(null);
   }
@@ -1075,7 +1131,8 @@ function ExportSheet({ r, onClose }) {
       ${!isPd && html`<div class="out-group">
         <span class="caps muted">Bank statement${(r.statements || []).length ? ' · ' + plural(r.statements.length, 'page') : ''}</span>
         ${!(r.statements || []).length ? html`<p class="small muted">No statement pages on this report. Add them under Bank statement to download them here.</p>`
-          : html`<${OutButton} ext="PDF" title="Bank statement PDF" sub=${(stTicked ? 'The ' + plural(stTicked, 'statement charge') + ' on the claim, each with its report charge, then ' : 'Your ') + 'statement pages'} busy=${busy === 'stmt'} disabled=${!!busy} onClick=${() => run('stmt')} />`}
+          : html`<${OutButton} ext="PDF" title="Bank statement PDF" sub=${(stTicked ? 'The ' + plural(stTicked, 'statement charge') + ' on the claim, each with its report charge, then ' : 'Your ') + 'statement pages'} busy=${busy === 'stmt'} disabled=${!!busy} onClick=${() => run('stmt')} />
+            <${OutButton} ext="ZIP" title="Statement files" sub="Your statements as you uploaded them: PDFs as they were, screenshots and photos as pictures" busy=${busy === 'stzip'} disabled=${!!busy} onClick=${() => run('stzip')} />`}
       </div>`}
       <p class="faint small">File name: ${C.fileBase(r)}</p>
     </div>
