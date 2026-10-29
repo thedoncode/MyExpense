@@ -304,10 +304,9 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .stmt-state { padding-left: 30px; }
 .stmt-state .btn { white-space: normal; text-align: left; }
 .stmt-edit { padding: 6px 0 4px 30px; }
+.stmt-sum { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; padding: 10px 12px; border-radius: 8px; }
+.stmt-sum.ok { background: var(--ok-bg); } .stmt-sum.ok svg { color: var(--ok); }
+.stmt-sum.warn { background: var(--warn-bg); } .stmt-sum.warn svg { color: var(--warn); }
+.stmt-sum svg { flex: none; margin-top: 1px; }
 .stmt-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
-.marker { position: relative; line-height: 0; user-select: none; -webkit-user-select: none; }
-.marker.on { touch-action: none; cursor: crosshair; }
-.marker img { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); pointer-events: none; }
-.mark { position: absolute; border: 2.5px solid #D62828; border-radius: 3px; background: rgba(214, 40, 40, .06); padding: 0; cursor: pointer; }
-.mark.draft { border-style: dashed; pointer-events: none; }
 .stmt-viewer { width: min(760px, 100%); }

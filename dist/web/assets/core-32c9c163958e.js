@@ -890,10 +890,10 @@
   }
 
   /* ---------------- bank statements ----------------
-     An itemized report can carry the card statement pages that show its charges. Claude reads every
-     row on a page; the person ticks the rows they're claiming; claimed rows are matched to the
-     report's charges (or added as charges); and the pages download as their own PDF, with the
-     claimed charges listed first and the person's own marks drawn on the pages. */
+     An itemized report carries the card statement pages that show its charges. Claude reads every row
+     on a page; each charge on the report is paired with the line that posted to the card (which also
+     gives a foreign-currency receipt its CAD); ticked lines not on the report can be added as charges;
+     and the pages download as their own PDF, with the lines on the claim listed first. */
   const STATEMENT_PROMPT = (today) => [
     'You are reading one page (a photo, screenshot or PDF page) of a bank or credit card statement, for an employee travel expense claim.',
     'List every transaction row on the page, top to bottom. Rules:',
@@ -940,69 +940,126 @@
     return { kind, card: json && typeof json.card === 'string' ? maskPayment(json.card).slice(0, 40) : '', rows };
   }
 
-  // Matches each claimed statement row to a charge on the report. A charge is used at most once.
-  //   linked: the person (or MyExpense) tied them together; the row's chargeId names the charge
-  //   same:   same CAD amount within 3 days, so it's that charge
-  //   cad:    a foreign-currency charge still missing its CAD amount, on the same day (within 3) with the
-  //           same original amount or the same vendor: the row's amount is the CAD that posted
-  //   none:   not on the report yet
+  // Pairs statement rows with the report's charges, so each charge on the claim corresponds to the line
+  // that posted to the card. A charge is paired with at most one row.
+  //   linked: paired already (the row's chargeId names the charge)
+  //   same:   the same CAD amount within 3 days
+  //   fx:     a foreign-currency charge whose original amount the row shows (e.g. USD 26.85), within 3 days;
+  //           the row's amount is the CAD that posted
+  //   cad:    a ticked row that looks like a foreign-currency charge still missing its CAD (same vendor,
+  //           within 3 days) but doesn't show the original amount: offered, not applied
+  //   dupe:   the same row on another page (a page added twice, overlapping screenshots)
+  //   none:   a ticked row that isn't on the report
+  // Rows nobody ticked that pair with nothing are left out.
   const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !/^\d+$/.test(w) && !['the', 'and', 'inc', 'ltd', 'llc', 'com', 'www', 'trip', 'help', 'pending'].includes(w));
   const sameVendor = (a, b) => { const A = new Set(words(a)); return words(b).some(w => A.has(w) || [...A].some(x => x.startsWith(w) || w.startsWith(x))); };
   const near = (a, b, n) => isISO(a) && isISO(b) && Math.abs(daysBetween(a, b)) <= n;
+  const isFx = (c) => !!c.currency && c.currency !== 'CAD';
   function linkStatement(r) {
-    const charges = (r.charges || []);
+    const charges = r.charges || [];
     const byId = new Map(charges.map(c => [c.id, c]));
-    const used = new Set();
-    const out = new Map();
-    const rows = [], pageOf = new Map();
-    (r.statements || []).forEach((p, i) => { for (const row of p.rows || []) if (row.claim) { rows.push(row); pageOf.set(row.id, i); } });
-    for (const row of rows) if (row.chargeId && byId.has(row.chargeId)) { out.set(row.id, { how: 'linked', charge: byId.get(row.chargeId) }); used.add(row.chargeId); }
-    for (const row of rows) {
-      if (out.has(row.id) || row.amount === null) continue;
-      const c = charges.find(c => !used.has(c.id) && chargeCAD(c) !== null && Math.abs(chargeCAD(c) - row.amount) < 0.005 && near(c.date, row.date, 3));
-      if (c) { out.set(row.id, { how: 'same', charge: c }); used.add(c.id); }
-    }
-    for (const row of rows) {
-      if (out.has(row.id) || row.amount === null) continue;
-      const fx = charges.filter(c => !used.has(c.id) && c.currency && c.currency !== 'CAD' && (c.cad === null || c.cad === undefined) && near(c.date, row.date, 3));
-      const c = fx.find(c => row.foreign && row.foreign.currency === c.currency && c.amount !== null && Math.abs(row.foreign.amount - c.amount) < 0.005)
-        || fx.find(c => sameVendor(c.vendor, row.description));
-      if (c) { out.set(row.id, { how: 'cad', charge: c }); used.add(c.id); }
-    }
-    // The same row on another page (a page added twice, or overlapping screenshots) is the same charge.
-    // Identical rows on one page are separate charges (two rides of the same fare).
-    const key = (row) => [row.date, row.amount, String(row.description || '').toLowerCase()].join('|');
-    const seen = new Map();
-    for (const row of rows) { const l = out.get(row.id); if (l && l.charge && !seen.has(key(row))) seen.set(key(row), { charge: l.charge, page: pageOf.get(row.id) }); }
+    const used = new Set(), out = new Map(), pageOf = new Map();
+    const rows = [];
+    (r.statements || []).forEach((p, i) => { for (const row of p.rows || []) if (!row.credit && row.amount !== null) { rows.push(row); pageOf.set(row.id, i); } });
+    rows.sort((a, b) => (b.claim ? 1 : 0) - (a.claim ? 1 : 0)); // ticked rows pair first
+    const pair = (row, how, c) => { out.set(row.id, { how, charge: c }); used.add(c.id); };
+    for (const row of rows) if (row.chargeId && byId.has(row.chargeId) && !used.has(row.chargeId)) pair(row, 'linked', byId.get(row.chargeId));
     for (const row of rows) {
       if (out.has(row.id)) continue;
+      const c = charges.find(c => !used.has(c.id) && chargeCAD(c) !== null && Math.abs(chargeCAD(c) - row.amount) < 0.005 && near(c.date, row.date, 3));
+      if (c) pair(row, 'same', c);
+    }
+    for (const row of rows) {
+      if (out.has(row.id) || !row.foreign) continue;
+      const c = charges.find(c => !used.has(c.id) && isFx(c) && c.currency === row.foreign.currency && c.amount !== null && Math.abs(row.foreign.amount - c.amount) < 0.005 && near(c.date, row.date, 3));
+      if (c) pair(row, 'fx', c);
+    }
+    for (const row of rows) {
+      if (out.has(row.id) || !row.claim) continue;
+      const fx = charges.filter(c => !used.has(c.id) && isFx(c) && (c.cad === null || c.cad === undefined) && near(c.date, row.date, 3) && sameVendor(c.vendor, row.description));
+      const rivals = fx.length === 1 ? rows.filter(x => x !== row && !out.has(x.id) && x.claim && near(fx[0].date, x.date, 3) && sameVendor(fx[0].vendor, x.description)) : [];
+      if (fx.length === 1 && !rivals.length) pair(row, 'cad', fx[0]);
+    }
+    const key = (row) => [row.date, row.amount, String(row.description || '').toLowerCase()].join('|');
+    const seen = new Map();
+    for (const row of rows) { const l = out.get(row.id); if (l && !seen.has(key(row))) seen.set(key(row), { charge: l.charge, page: pageOf.get(row.id) }); }
+    for (const row of rows) {
+      if (out.has(row.id) || !row.claim) continue;
       const s = seen.get(key(row));
-      out.set(row.id, s && s.page !== pageOf.get(row.id) ? { how: 'linked', charge: s.charge } : { how: 'none', charge: null });
+      out.set(row.id, s && s.page !== pageOf.get(row.id) ? { how: 'dupe', charge: s.charge } : { how: 'none', charge: null });
     }
     return out;
   }
-  // The charge a claimed row becomes when it isn't on the report yet
+  const PAIRED = ['linked', 'same', 'fx'];
+  // The report against its statement: which charges are on it (and whether the amounts agree), which
+  // aren't, and which ticked rows aren't on the report
+  function statementCheck(r) {
+    const pages = r.statements || [];
+    const links = linkStatement(r);
+    const onStatement = new Map();
+    pages.forEach((p, i) => (p.rows || []).forEach(row => {
+      const l = links.get(row.id);
+      if (!l || !PAIRED.includes(l.how) || onStatement.has(l.charge.id)) return;
+      const v = chargeCAD(l.charge);
+      const cadRow = (row.currency || 'CAD') === 'CAD';
+      onStatement.set(l.charge.id, { row, page: i + 1, how: l.how, mismatch: cadRow && v !== null && Math.abs(v - row.amount) >= 0.005 });
+    }));
+    const ready = pages.length > 0 && !pages.some(p => p.ai === 'reading' || p.ai === 'processing');
+    const charges = r.charges || [];
+    const missing = ready ? charges.filter(c => !onStatement.has(c.id) && c.ai !== 'reading' && c.ai !== 'processing') : [];
+    const rows = pages.flatMap(p => p.rows || []);
+    const of = (how) => rows.filter(x => links.get(x.id) && links.get(x.id).how === how);
+    return { links, onStatement, ready, missing, unlisted: of('none'), suggestions: of('cad'), mismatches: [...onStatement.values()].filter(x => x.mismatch) };
+  }
+  // Records the pairs found by amount, so they hold if a charge is edited later, and fills in the CAD
+  // for a foreign-currency charge from the line that posted. Returns the same report when nothing changes.
+  function reconcile(r) {
+    if (!r || r.type !== 'itemized' || !(r.statements || []).length) return r;
+    const links = linkStatement(r);
+    let changed = false;
+    const fill = new Map();
+    const statements = r.statements.map(p => {
+      let pc = false;
+      const rows = (p.rows || []).map(row => {
+        const l = links.get(row.id);
+        if (!l || !PAIRED.includes(l.how)) return row;
+        if (l.how === 'fx' && (row.currency || 'CAD') === 'CAD' && (l.charge.cad === null || l.charge.cad === undefined)) fill.set(l.charge.id, row.amount);
+        if (row.chargeId === l.charge.id && row.claim) return row;
+        pc = true;
+        return { ...row, claim: true, chargeId: l.charge.id };
+      });
+      if (pc) changed = true;
+      return pc ? { ...p, rows } : p;
+    });
+    if (!changed && !fill.size) return r;
+    const charges = fill.size ? r.charges.map(c => (fill.has(c.id) ? { ...c, cad: fill.get(c.id) } : c)) : r.charges;
+    return { ...r, charges, statements };
+  }
+  // The charge a ticked row becomes when it isn't on the report yet
   function chargeFromRow(row, id) {
     const cur = row.currency || 'CAD';
     return { id, date: isISO(row.date) ? row.date : null, vendor: String(row.description || '').slice(0, 60), category: CAT[row.category] ? row.category : '',
       amount: row.amount, currency: cur, cad: null, approved: false, imageId: null, ai: 'read', checked: false, payment: '', aiNote: 'From your card statement. Check the details, then confirm.' };
   }
-  // Rows for the statement PDF's list: every claimed row, in date order, with where it went on the claim
+  // Rows for the statement PDF's list: every row on the claim (ticked or paired), in date order, with
+  // the charge it corresponds to
   function statementList(r) {
     const links = linkStatement(r);
     const out = [];
     (r.statements || []).forEach((p, pi) => (p.rows || []).forEach(row => {
-      if (!row.claim) return;
       const l = links.get(row.id);
-      out.push({ page: pi + 1, row, charge: l && l.charge, how: l ? l.how : 'none' });
+      if (l && l.how === 'dupe') return;
+      const paired = l && PAIRED.includes(l.how);
+      if (!row.claim && !paired) return;
+      out.push({ page: pi + 1, row, charge: paired ? l.charge : null, how: l ? l.how : 'none' });
     }));
     out.sort((a, b) => String(a.row.date || '9999').localeCompare(String(b.row.date || '9999')) || a.page - b.page);
     return out;
   }
 
-  // The statement PDF: the claimed charges listed first, then each statement page on its own page,
-  // with the person's own marks drawn on it in red.
-  function pdfStatement(doc, { heading, sub, items, pages, fresh }) {
+  // The statement PDF: the statement lines on the claim listed first, each with the charge it
+  // corresponds to, then any charges not found on the statement, then each statement page.
+  function pdfStatement(doc, { heading, sub, items, missing, pages, fresh }) {
     const [PW, PH] = LETTER_P;
     const M = 40;
     const ink = () => doc.setTextColor(20, 24, 32);
@@ -1029,13 +1086,15 @@
       y += 15; doc.setFont('helvetica', 'normal');
     };
     if (!items.length) {
-      doc.setTextColor(110, 110, 110); doc.text('No charges are ticked on these statement pages. The pages follow.', M, y); y += 14;
+      doc.setTextColor(110, 110, 110); doc.text('No charges on these statement pages are on the claim.', M, y); y += 14;
     } else {
       head();
       let total = 0;
       for (const it of items) {
         const r = it.row, c = it.charge;
-        const claimAs = c ? (CAT[c.category] ? CAT[c.category].label : 'Charge') + (isISO(c.date) ? ', week ending ' + fmtDDMonYY(saturdayOf(c.date)) : '') : 'Not on the report';
+        const v = c ? chargeCAD(c) : null;
+        const off = c && (r.currency || 'CAD') === 'CAD' && v !== null && Math.abs(v - r.amount) >= 0.005;
+        const claimAs = c ? (CAT[c.category] ? CAT[c.category].label : 'Charge') + (c.vendor ? ', ' + c.vendor : '') + (isISO(c.date) ? ', week ending ' + fmtDDMonYY(saturdayOf(c.date)) : '') + (off ? '. The report has ' + amt(v, 'CAD') : '') : 'Not on the report';
         const desc = doc.splitTextToSize((r.description || '—') + (r.foreign ? ' (' + r.foreign.currency + ' ' + r.foreign.amount.toFixed(2) + ')' : ''), cols[1].w - 6);
         const claim = doc.splitTextToSize(claimAs + ' · page ' + it.page, cols[3].w - 4);
         const h = Math.max(desc.length, claim.length) * 10.5 + 4;
@@ -1044,7 +1103,7 @@
         doc.text(r.date ? fmtNice(r.date) : '—', cols[0].x + 2, y);
         desc.forEach((t, k) => doc.text(t, cols[1].x + 2, y + k * 10.5));
         doc.text(r.amount !== null ? amt(r.amount, r.currency) : '—', cols[2].x + cols[2].w, y, { align: 'right' });
-        if (!c) doc.setTextColor(170, 60, 40);
+        if (!c || off) doc.setTextColor(170, 60, 40);
         claim.forEach((t, k) => doc.text(t, cols[3].x + 2, y + k * 10.5));
         doc.setDrawColor(225, 225, 225); doc.line(M, y + h - 8, PW - M, y + h - 8);
         y += h;
@@ -1055,8 +1114,19 @@
       doc.text(amt(total, cur), cols[2].x + cols[2].w, y + 4, { align: 'right' });
       y += 20;
     }
+    if (missing && missing.length) {
+      if (y + 40 > PH - M) { newPage(); top('Bank statement charges (continued)'); y = M + 30; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(170, 60, 40);
+      doc.text('On the report but not found on these statement pages', M, y); y += 13;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); ink();
+      for (const t of missing) {
+        if (y > PH - M - 20) { newPage(); top('Bank statement charges (continued)'); y = M + 30; doc.setFontSize(8.5); ink(); }
+        doc.text(t, M + 2, y); y += 11;
+      }
+      y += 8;
+    }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110, 110, 110);
-    doc.text(pages.length ? 'The statement page' + (pages.length > 1 ? 's follow' : ' follows') + '. Charges you marked are boxed in red.' : 'No statement pages attached.', M, Math.min(y, PH - M));
+    doc.text(pages.length ? 'The statement page' + (pages.length > 1 ? 's follow' : ' follows') + '.' : 'No statement pages attached.', M, Math.min(y, PH - M));
     // 2. the statement pages
     pages.forEach((p, i) => {
       newPage(); top('Statement page ' + (i + 1) + ' of ' + pages.length + (p.label ? ' · ' + p.label : ''));
@@ -1066,22 +1136,12 @@
       const w = p.w * sc, h = p.h * sc, x = M + (maxW - w) / 2;
       doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.5); doc.rect(x - 0.5, yy - 0.5, w + 1, h + 1, 'S');
       doc.addImage(p.data, 'JPEG', x, yy, w, h, undefined, 'FAST');
-      doc.setDrawColor(214, 40, 40); doc.setLineWidth(1.8);
-      for (const m of p.marks || []) doc.rect(x + m.x * w, yy + m.y * h, m.w * w, m.h * h, 'S');
     });
   }
 
   function cleanStatementPage(p) {
     if (!p || typeof p !== 'object' || typeof p.id !== 'string' || !ID.test(p.id)) return null;
     const interrupted = p.ai === 'reading' || p.ai === 'processing';
-    const frac = (v) => (typeof v === 'number' && isFinite(v) ? Math.min(1, Math.max(0, v)) : null);
-    const marks = (Array.isArray(p.marks) ? p.marks : []).slice(0, 60).map(m => {
-      if (!m || typeof m !== 'object') return null;
-      const x = frac(m.x), y = frac(m.y), w = frac(m.w), h = frac(m.h);
-      if ([x, y, w, h].includes(null)) return null;
-      const cw = Math.min(w, 1 - x), ch = Math.min(h, 1 - y);
-      return cw < 0.005 || ch < 0.003 ? null : { x, y, w: cw, h: ch };
-    }).filter(Boolean);
     const rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 120).map(r => {
       if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !ID.test(r.id)) return null;
       const f = r.foreign && typeof r.foreign === 'object' && num(r.foreign.amount) !== null && toCur(r.foreign.currency) ? { amount: num(r.foreign.amount), currency: toCur(r.foreign.currency) } : null;
@@ -1092,7 +1152,7 @@
     return { id: p.id, imageId: typeof p.imageId === 'string' && ID.test(p.imageId) ? p.imageId : null, name: str(p.name, 80),
       w: num(p.w) || 0, h: num(p.h) || 0, card: maskPayment(str(p.card, 40)),
       ai: interrupted ? 'failed' : (p.ai === 'read' || p.ai === 'failed' ? p.ai : null),
-      aiNote: interrupted ? 'Reading this page was interrupted. Tick and fill in the charges yourself.' : str(p.aiNote, 200), rows, marks };
+      aiNote: interrupted ? 'Reading this page was interrupted. Tick and fill in the charges yourself.' : str(p.aiNote, 200), rows };
   }
 
   const api = {
@@ -1103,7 +1163,7 @@
     chargeCAD, chargeIssue, itemizedProblems, itemizedWeeks, itemizedSummary, itemizedCells, itemizedXlsx,
     fileBase, safeName, receiptList, formatCell, drawSheet, pdfForms, pdfReceipts,
     AI_PROMPT, normalizeAi, maskPayment, cleanReport, cleanCharge, cleanSettings,
-    STATEMENT_PROMPT, normalizeStatement, linkStatement, chargeFromRow, statementList, pdfStatement, cleanStatementPage,
+    STATEMENT_PROMPT, normalizeStatement, linkStatement, statementCheck, reconcile, chargeFromRow, statementList, pdfStatement, cleanStatementPage,
     _internal: { parseSheet, serializeSheet, SST, applyCell },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
