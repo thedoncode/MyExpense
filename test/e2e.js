@@ -65,13 +65,20 @@ const RUNTIME = `
   const colRef = (p) => ({ path: p, doc: (id) => docRef(p + '/' + id), get: () => list(p), limit: (n) => ({ get: () => list(p, n) }) });
   window.__downloads = [];
   let n = 0;
-  const R = [
+  const R = who.R || [
     { kind: 'receipt', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, payment: 'Visa 4412' }] },
     { kind: 'receipt', transactions: [{ date: '2026-05-10', vendor: 'Budget', category: 'rental', amount: 980.25, currency: 'CAD', payment: 'Visa 4412' }] },
   ];
+  // A statement page: what Claude returns for the statement prompt
+  const STMT = { kind: 'statement', card: 'Visa 4412', rows: [
+    { date: '2026-04-29', description: 'UBER *TRIP HELP.UBER.COM', amount: 36.93, currency: 'CAD', credit: false, foreign: { amount: 26.85, currency: 'USD' }, category: 'taxi', marked: true },
+    { date: '2026-04-30', description: 'STARBUCKS 0412', amount: 6.45, currency: 'CAD', credit: false, foreign: null, category: 'meal', marked: false },
+    { date: '2026-05-10', description: 'BUDGET RENT-A-CAR LAX', amount: 980.25, currency: 'CAD', credit: false, foreign: null, category: 'rental', marked: true },
+    { date: '2026-05-02', description: 'PAYMENT - THANK YOU', amount: 500, currency: 'CAD', credit: true, foreign: null, category: 'other', marked: false },
+  ] };
   const sample = Object.assign(async () => ({ text: '' }), {
     limits: async () => ({ maxInputBytes: 1e6, images: { maxCount: 5, maxInputBytes: 5e6, mediaTypes: ['image/jpeg', 'image/png'] } }),
-    json: async (prompt, opts) => { if (!opts.images || !opts.images.length) throw { code: 'invalid_argument' }; await new Promise(r => setTimeout(r, 200)); return R[Math.min(n++, R.length - 1)]; } });
+    json: async (prompt, opts) => { if (!opts.images || !opts.images.length) throw { code: 'invalid_argument' }; await new Promise(r => setTimeout(r, 200)); if (/one page .* of a bank or credit card statement/.test(prompt)) return STMT; return R[Math.min(n++, R.length - 1)]; } });
   const caps = who.signedIn ? {
     db: { doc: docRef, collection: colRef },
     user: { id: async () => who.id, can: async () => null, isOwner: async () => who.level === 'owner' },
@@ -277,6 +284,73 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     const after = keysOf('prod', 'data/users/u_alex/').length;
     check(before > 0 && after === 0, 'Alex’s area went from ' + before + ' documents to ' + after);
     check(keysOf('prod', 'data/users/u_jamie/').length > 0, 'Jamie’s data is untouched');
+    check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
+    await ctx.close();
+  }
+
+  console.log('S: a bank statement on an itemized report');
+  {
+    const SAM = { id: 'u_sam', level: 'interact', signedIn: true, R: [
+      { kind: 'receipt', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, payment: 'Visa 4412' }] },
+      { kind: 'statement', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 36.93, currency: 'CAD' }] },
+    ] };
+    const { ctx, page, errors } = await open(browser, { who: SAM });
+    await page.waitForSelector('text=New itemized report');
+    await page.click('text=New itemized report');
+    await page.fill('#it-name', 'Sam Lee');
+    await page.fill('#it-cust', 'Fabrikam Burbank');
+    await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
+    await page.waitForFunction(() => document.querySelectorAll('.charge-row').length === 1 && !/Reading receipt|Adding photo/.test(document.body.innerText), null, { timeout: 30000 });
+    await page.setInputFiles('#st-up', path.join(FIX, 'statement.png'));
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && !/Reading statement|Adding page/.test(document.body.innerText), null, { timeout: 30000 });
+    const ticked = await page.$$eval('.stmt-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+    check(ticked.length === 2 && /UBER/.test(ticked[0]) && /BUDGET/.test(ticked[1]), 'the marked rows are ticked; the coffee and the payment aren’t: ' + JSON.stringify(ticked));
+    check(await page.isVisible('text=Show all 4 rows'), 'the other rows are a tap away');
+    await page.click('text=Use CA$36.93 as the CAD for Uber');
+    await page.waitForSelector('.stmt-row >> text=On the report: Taxi / Uber');
+    check(true, 'the statement fills in the CAD for the US-dollar Uber receipt');
+    await page.click('text=Add it to the report');
+    await page.waitForFunction(() => document.querySelectorAll('.charge-row').length === 2);
+    const rowsNow = await page.$$eval('.charge-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+    check(rowsNow.some(t => /BUDGET RENT-A-CAR LAX/.test(t) && /980\.25/.test(t)), 'the rental on the statement is added to the report as a charge: ' + JSON.stringify(rowsNow));
+    await page.click('.charge-row >> text=BUDGET');
+    await page.click('text=Details are correct');
+    await page.click('text=Mark charges');
+    const box = await page.waitForSelector('.marker.on');
+    const b = await box.boundingBox();
+    await page.mouse.move(b.x + b.width * 0.05, b.y + b.height * 0.2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.6, b.y + b.height * 0.25, { steps: 5 });
+    await page.mouse.move(b.x + b.width * 0.95, b.y + b.height * 0.28, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForSelector('.marker .mark:not(.draft)');
+    await shot(page, 'S-marking');
+    await page.click('[role=dialog] >> text=Done');
+    await page.waitForTimeout(900);
+    const stored = [...servers.prod.entries()].filter(([k]) => k.startsWith('data/users/u_sam/app/reports/')).map(([, v]) => v);
+    const st = stored[0] && stored[0].statements && stored[0].statements[0];
+    check(st && st.marks.length === 1 && st.marks[0].w > 0.8 && st.rows.length === 4, 'the page, its rows and the red box are saved with the report');
+    await shot(page, 'S-statement');
+    await page.click('.dock >> text=Download');
+    await page.waitForSelector('text=Bank statement PDF');
+    check(await page.isVisible('text=Receipts · 1'), 'the statement isn’t one of the receipts');
+    const before = await page.evaluate(() => window.__downloads.length);
+    await page.click('text=Bank statement PDF');
+    await page.waitForFunction((x) => window.__downloads.length > x, before);
+    const dl = (await page.evaluate(() => window.__downloads)).pop();
+    const pdf = Buffer.from(dl.b64, 'base64');
+    fs.writeFileSync(path.join(OUT, 'S-' + dl.filename), pdf);
+    const pageCount = (pdf.toString('latin1').match(/\/Type \/Page[^s]/g) || []).length;
+    check(/Fabrikam Burbank Itemized Expenses .* Bank Statement\.pdf$/.test(dl.filename) && pdf.subarray(0, 5).toString() === '%PDF-' && pageCount === 2, 'downloads as its own PDF: ' + dl.filename + ' (' + pageCount + ' pages)');
+    await page.click('[aria-label="Close"]');
+    await page.click('[aria-label="Back to reports"]');
+    // A statement added with the receipts moves to its own section, and its ticked charges are added
+    await page.click('text=New itemized report');
+    await page.fill('#it-cust', 'Fabrikam statement only');
+    await page.setInputFiles('#it-up', path.join(FIX, 'statement.png'));
+    await page.waitForSelector('text=That looks like a card statement');
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && document.querySelectorAll('.charge-row').length === 2, null, { timeout: 30000 });
+    check(true, 'a statement added with the receipts moves to Bank statement and its two ticked charges land on the report');
     check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
     await ctx.close();
   }

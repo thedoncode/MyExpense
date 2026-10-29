@@ -35,7 +35,7 @@ To report a problem, see [SECURITY.md](../SECURITY.md) at the repo root.
 - **Nothing is kept on the device.** No browser storage is used: no IndexedDB, localStorage or cookies. The next person on a shared computer finds nothing. Files land on a device only when someone downloads them.
 - **Losing access stops the app.** If a save is refused because access was removed or never granted, the app drops everything it was holding and shows the access screen. With SCIM provisioning on Claude Enterprise, someone who leaves the company loses their Claude account, and with it MyExpense.
 - **Stored data is validated when it's read back.** Every report is checked against the expected shape when it loads: unknown fields dropped, text length-limited, impossible dates and amounts rejected. A damaged or tampered record can't break the app.
-- **Card numbers aren't kept in full.** Claude is asked for only the last four digits, and any run of eight or more digits is masked to `••1234` before it's saved. The receipt photo itself is kept as taken, because it's needed for the claim.
+- **Card numbers aren't kept in full.** Claude is asked for only the last four digits, and any run of eight or more digits is masked to `••1234` before it's saved, in receipts and in statement rows alike. Receipt photos and statement pages are kept as taken, because they're needed for the claim.
 
 ## Threat model
 

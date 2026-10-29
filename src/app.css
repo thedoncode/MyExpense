@@ -282,3 +282,32 @@ ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .seg { justify-self: start; display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
 .seg button { border: 0; background: transparent; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); font-weight: 700; }
+
+/* bank statement */
+.stmt.drag { outline: 2px dashed var(--focus); outline-offset: 2px; }
+.stmt-page { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.stmt-head { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+.stmt-thumb { width: 64px; height: 84px; padding: 0; cursor: zoom-in; }
+.stmt-thumb img { object-position: top; }
+.stmt-head .l2 { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.stmt-rows { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.stmt-row { display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line-2); background: var(--surface); }
+.stmt-row:first-child { border-top: 0; }
+.stmt-row.on { background: color-mix(in srgb, var(--surface-2) 60%, var(--surface)); }
+.stmt-line { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
+.stmt-line input[type=checkbox] { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
+.stmt-desc { display: flex; gap: 10px; min-width: 0; font-size: 14px; cursor: pointer; }
+.stmt-desc > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.stmt-desc .d { color: var(--muted); font-size: 13px; flex: none; min-width: 46px; }
+.stmt-amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+.icon-btn.sm { width: 36px; height: 36px; }
+.stmt-state { padding-left: 30px; }
+.stmt-state .btn { white-space: normal; text-align: left; }
+.stmt-edit { padding: 6px 0 4px 30px; }
+.stmt-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
+.marker { position: relative; line-height: 0; user-select: none; -webkit-user-select: none; }
+.marker.on { touch-action: none; cursor: crosshair; }
+.marker img { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); pointer-events: none; }
+.mark { position: absolute; border: 2.5px solid #D62828; border-radius: 3px; background: rgba(214, 40, 40, .06); padding: 0; cursor: pointer; }
+.mark.draft { border-style: dashed; pointer-events: none; }
+.stmt-viewer { width: min(760px, 100%); }

@@ -835,8 +835,11 @@
         partialMode: r.partialMode === 'none' || r.partialMode === 'some' ? r.partialMode : null,
         partialDays: Array.isArray(r.partialDays) ? r.partialDays.filter(isISO).slice(0, 400) : [] };
     }
-    return { ...base, manager: str(r.manager, 80), location: str(r.location, 80),
-      charges: (Array.isArray(r.charges) ? r.charges : []).slice(0, 500).map(cleanCharge).filter(Boolean) };
+    const charges = (Array.isArray(r.charges) ? r.charges : []).slice(0, 500).map(cleanCharge).filter(Boolean);
+    const ids = new Set(charges.map(c => c.id));
+    const statements = (Array.isArray(r.statements) ? r.statements : []).slice(0, 30).map(cleanStatementPage).filter(Boolean);
+    for (const p of statements) for (const row of p.rows) if (row.chargeId && !ids.has(row.chargeId)) row.chargeId = null; // the charge was deleted
+    return { ...base, manager: str(r.manager, 80), location: str(r.location, 80), charges, statements };
   }
   function cleanSettings(s) { return s && typeof s === 'object' ? { name: str(s.name, 80), ...(typeof s.manager === 'string' ? { manager: str(s.manager, 80) } : {}) } : {}; }
 
@@ -886,6 +889,212 @@
     return { kind: json && json.kind, transactions: out };
   }
 
+  /* ---------------- bank statements ----------------
+     An itemized report can carry the card statement pages that show its charges. Claude reads every
+     row on a page; the person ticks the rows they're claiming; claimed rows are matched to the
+     report's charges (or added as charges); and the pages download as their own PDF, with the
+     claimed charges listed first and the person's own marks drawn on the pages. */
+  const STATEMENT_PROMPT = (today) => [
+    'You are reading one page (a photo, screenshot or PDF page) of a bank or credit card statement, for an employee travel expense claim.',
+    'List every transaction row on the page, top to bottom. Rules:',
+    '- Never guess. If a value is not clearly readable, use null.',
+    '- date: the transaction date as YYYY-MM-DD. Today is ' + today + '; if the year is not printed, use the most recent past date that fits.',
+    '- description: the merchant or description as printed, up to 60 characters.',
+    '- amount: the amount as a positive number in the statement\'s own currency. currency: that currency\'s ISO code (usually CAD).',
+    '- credit: true for payments, refunds and other credits; false for purchases.',
+    '- foreign: if the row also shows an original foreign-currency amount (e.g. "USD 26.85"), give it as {"amount": 26.85, "currency": "USD"}; else null.',
+    '- category: one of "taxi" (Uber, Lyft, taxi, rideshare), "rental" (car/vehicle rental), "airfare" (airline, including baggage fees), "fuel" (gas station), "parking", "hotel", "meal", "other".',
+    '- marked: true only if the row is visibly marked on the image (red box, highlight, circle, tick or arrow); else false.',
+    '- card: the card type and ONLY its last 4 digits if shown on the page (e.g. "Visa 4412"), never a full card number; else null.',
+    'Reply with only JSON in this shape: {"kind":"statement"|"not_statement"|"unreadable","card":string|null,"rows":[{"date":"YYYY-MM-DD"|null,"description":string|null,"amount":number|null,"currency":string|null,"credit":boolean,"foreign":{"amount":number,"currency":string}|null,"category":string,"marked":boolean}]}',
+  ].join('\n');
+
+  const toNum = (x) => (typeof x === 'number' && isFinite(x) ? round2(Math.abs(x)) : typeof x === 'string' && x.trim() && isFinite(Number(x.replace(/[$,\s]/g, ''))) ? round2(Math.abs(Number(x.replace(/[$,\s]/g, '')))) : null);
+  const toCur = (x) => { let c = typeof x === 'string' ? x.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) : ''; if (c === 'CDN') c = 'CAD'; if (c === 'US') c = 'USD'; return /^[A-Z]{3}$/.test(c) ? c : null; };
+  function toCat(x) {
+    let c = String(x || '').toLowerCase();
+    if (c === 'meal' || c === 'other') c = 'misc';
+    if (c === 'uber' || c === 'rideshare') c = 'taxi';
+    if (c === 'baggage') c = 'airfare';
+    return CAT[c] ? c : 'misc';
+  }
+  // Validates Claude's answer for a statement page and decides which rows start ticked: the rows the
+  // person marked on the image if there are any, otherwise the usual claim types. Credits never are.
+  function normalizeStatement(json) {
+    const list = json && Array.isArray(json.rows) ? json.rows : [];
+    const rows = [];
+    for (const t of list.slice(0, 80)) {
+      if (!t || typeof t !== 'object') continue;
+      const f = t.foreign && typeof t.foreign === 'object' ? { amount: toNum(t.foreign.amount), currency: toCur(t.foreign.currency) } : null;
+      rows.push({
+        date: isISO(t.date) ? t.date : null,
+        description: typeof t.description === 'string' ? maskPayment(t.description).slice(0, 60) : '',
+        amount: toNum(t.amount), currency: toCur(t.currency), credit: t.credit === true,
+        foreign: f && f.amount !== null && f.currency ? f : null,
+        category: toCat(t.category), marked: t.marked === true,
+      });
+    }
+    const anyMarked = rows.some(r => r.marked);
+    for (const r of rows) r.claim = !r.credit && r.amount !== null && (anyMarked ? r.marked : CAT[r.category].q);
+    const kind = ['statement', 'not_statement', 'unreadable'].includes(json && json.kind) ? json.kind : null;
+    return { kind, card: json && typeof json.card === 'string' ? maskPayment(json.card).slice(0, 40) : '', rows };
+  }
+
+  // Matches each claimed statement row to a charge on the report. A charge is used at most once.
+  //   linked: the person (or MyExpense) tied them together; the row's chargeId names the charge
+  //   same:   same CAD amount within 3 days, so it's that charge
+  //   cad:    a foreign-currency charge still missing its CAD amount, on the same day (within 3) with the
+  //           same original amount or the same vendor: the row's amount is the CAD that posted
+  //   none:   not on the report yet
+  const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !/^\d+$/.test(w) && !['the', 'and', 'inc', 'ltd', 'llc', 'com', 'www', 'trip', 'help', 'pending'].includes(w));
+  const sameVendor = (a, b) => { const A = new Set(words(a)); return words(b).some(w => A.has(w) || [...A].some(x => x.startsWith(w) || w.startsWith(x))); };
+  const near = (a, b, n) => isISO(a) && isISO(b) && Math.abs(daysBetween(a, b)) <= n;
+  function linkStatement(r) {
+    const charges = (r.charges || []);
+    const byId = new Map(charges.map(c => [c.id, c]));
+    const used = new Set();
+    const out = new Map();
+    const rows = [], pageOf = new Map();
+    (r.statements || []).forEach((p, i) => { for (const row of p.rows || []) if (row.claim) { rows.push(row); pageOf.set(row.id, i); } });
+    for (const row of rows) if (row.chargeId && byId.has(row.chargeId)) { out.set(row.id, { how: 'linked', charge: byId.get(row.chargeId) }); used.add(row.chargeId); }
+    for (const row of rows) {
+      if (out.has(row.id) || row.amount === null) continue;
+      const c = charges.find(c => !used.has(c.id) && chargeCAD(c) !== null && Math.abs(chargeCAD(c) - row.amount) < 0.005 && near(c.date, row.date, 3));
+      if (c) { out.set(row.id, { how: 'same', charge: c }); used.add(c.id); }
+    }
+    for (const row of rows) {
+      if (out.has(row.id) || row.amount === null) continue;
+      const fx = charges.filter(c => !used.has(c.id) && c.currency && c.currency !== 'CAD' && (c.cad === null || c.cad === undefined) && near(c.date, row.date, 3));
+      const c = fx.find(c => row.foreign && row.foreign.currency === c.currency && c.amount !== null && Math.abs(row.foreign.amount - c.amount) < 0.005)
+        || fx.find(c => sameVendor(c.vendor, row.description));
+      if (c) { out.set(row.id, { how: 'cad', charge: c }); used.add(c.id); }
+    }
+    // The same row on another page (a page added twice, or overlapping screenshots) is the same charge.
+    // Identical rows on one page are separate charges (two rides of the same fare).
+    const key = (row) => [row.date, row.amount, String(row.description || '').toLowerCase()].join('|');
+    const seen = new Map();
+    for (const row of rows) { const l = out.get(row.id); if (l && l.charge && !seen.has(key(row))) seen.set(key(row), { charge: l.charge, page: pageOf.get(row.id) }); }
+    for (const row of rows) {
+      if (out.has(row.id)) continue;
+      const s = seen.get(key(row));
+      out.set(row.id, s && s.page !== pageOf.get(row.id) ? { how: 'linked', charge: s.charge } : { how: 'none', charge: null });
+    }
+    return out;
+  }
+  // The charge a claimed row becomes when it isn't on the report yet
+  function chargeFromRow(row, id) {
+    const cur = row.currency || 'CAD';
+    return { id, date: isISO(row.date) ? row.date : null, vendor: String(row.description || '').slice(0, 60), category: CAT[row.category] ? row.category : '',
+      amount: row.amount, currency: cur, cad: null, approved: false, imageId: null, ai: 'read', checked: false, payment: '', aiNote: 'From your card statement. Check the details, then confirm.' };
+  }
+  // Rows for the statement PDF's list: every claimed row, in date order, with where it went on the claim
+  function statementList(r) {
+    const links = linkStatement(r);
+    const out = [];
+    (r.statements || []).forEach((p, pi) => (p.rows || []).forEach(row => {
+      if (!row.claim) return;
+      const l = links.get(row.id);
+      out.push({ page: pi + 1, row, charge: l && l.charge, how: l ? l.how : 'none' });
+    }));
+    out.sort((a, b) => String(a.row.date || '9999').localeCompare(String(b.row.date || '9999')) || a.page - b.page);
+    return out;
+  }
+
+  // The statement PDF: the claimed charges listed first, then each statement page on its own page,
+  // with the person's own marks drawn on it in red.
+  function pdfStatement(doc, { heading, sub, items, pages, fresh }) {
+    const [PW, PH] = LETTER_P;
+    const M = 40;
+    const ink = () => doc.setTextColor(20, 24, 32);
+    let first = true;
+    const newPage = () => { if (!(fresh && first)) doc.addPage('letter', 'portrait'); first = false; };
+    const top = (label) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); ink(); doc.text(heading, M, M);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110, 110, 110); doc.text(label, PW - M, M, { align: 'right' });
+      doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5); doc.line(M, M + 8, PW - M, M + 8);
+    };
+    // 1. the list of claimed statement charges
+    newPage(); top('Bank statement charges');
+    let y = M + 30;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); ink();
+    for (const t of sub) { doc.text(t, M, y); y += 12; }
+    y += 8;
+    const cur = items.length && items[0].row.currency ? items[0].row.currency : 'CAD';
+    const amt = (n, c) => (c && c !== cur ? c + ' ' : '') + round2(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cols = [{ k: 'Date', x: M, w: 62 }, { k: 'Description', x: M + 62, w: 196 }, { k: 'Amount (' + cur + ')', x: M + 258, w: 74, right: true }, { k: 'On the claim as', x: M + 344, w: PW - 2 * M - 344 }];
+    const head = () => {
+      doc.setFillColor(238, 241, 244); doc.rect(M, y - 10, PW - 2 * M, 15, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); ink();
+      for (const c of cols) doc.text(c.k, c.right ? c.x + c.w : c.x + 2, y, c.right ? { align: 'right' } : undefined);
+      y += 15; doc.setFont('helvetica', 'normal');
+    };
+    if (!items.length) {
+      doc.setTextColor(110, 110, 110); doc.text('No charges are ticked on these statement pages. The pages follow.', M, y); y += 14;
+    } else {
+      head();
+      let total = 0;
+      for (const it of items) {
+        const r = it.row, c = it.charge;
+        const claimAs = c ? (CAT[c.category] ? CAT[c.category].label : 'Charge') + (isISO(c.date) ? ', week ending ' + fmtDDMonYY(saturdayOf(c.date)) : '') : 'Not on the report';
+        const desc = doc.splitTextToSize((r.description || '—') + (r.foreign ? ' (' + r.foreign.currency + ' ' + r.foreign.amount.toFixed(2) + ')' : ''), cols[1].w - 6);
+        const claim = doc.splitTextToSize(claimAs + ' · page ' + it.page, cols[3].w - 4);
+        const h = Math.max(desc.length, claim.length) * 10.5 + 4;
+        if (y + h > PH - M - 30) { newPage(); top('Bank statement charges (continued)'); y = M + 30; head(); }
+        doc.setFontSize(8.5); ink();
+        doc.text(r.date ? fmtNice(r.date) : '—', cols[0].x + 2, y);
+        desc.forEach((t, k) => doc.text(t, cols[1].x + 2, y + k * 10.5));
+        doc.text(r.amount !== null ? amt(r.amount, r.currency) : '—', cols[2].x + cols[2].w, y, { align: 'right' });
+        if (!c) doc.setTextColor(170, 60, 40);
+        claim.forEach((t, k) => doc.text(t, cols[3].x + 2, y + k * 10.5));
+        doc.setDrawColor(225, 225, 225); doc.line(M, y + h - 8, PW - M, y + h - 8);
+        y += h;
+        if (r.amount !== null && (r.currency || cur) === cur) total += r.amount;
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); ink();
+      doc.text('Total of the charges listed', cols[1].x + 2, y + 4);
+      doc.text(amt(total, cur), cols[2].x + cols[2].w, y + 4, { align: 'right' });
+      y += 20;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110, 110, 110);
+    doc.text(pages.length ? 'The statement page' + (pages.length > 1 ? 's follow' : ' follows') + '. Charges you marked are boxed in red.' : 'No statement pages attached.', M, Math.min(y, PH - M));
+    // 2. the statement pages
+    pages.forEach((p, i) => {
+      newPage(); top('Statement page ' + (i + 1) + ' of ' + pages.length + (p.label ? ' · ' + p.label : ''));
+      const yy = M + 22, maxW = PW - 2 * M, maxH = PH - M - yy;
+      if (!p.data) { doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text('This page’s image couldn’t be loaded.', M, yy + 14); return; }
+      const sc = Math.min(maxW / p.w, maxH / p.h);
+      const w = p.w * sc, h = p.h * sc, x = M + (maxW - w) / 2;
+      doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.5); doc.rect(x - 0.5, yy - 0.5, w + 1, h + 1, 'S');
+      doc.addImage(p.data, 'JPEG', x, yy, w, h, undefined, 'FAST');
+      doc.setDrawColor(214, 40, 40); doc.setLineWidth(1.8);
+      for (const m of p.marks || []) doc.rect(x + m.x * w, yy + m.y * h, m.w * w, m.h * h, 'S');
+    });
+  }
+
+  function cleanStatementPage(p) {
+    if (!p || typeof p !== 'object' || typeof p.id !== 'string' || !ID.test(p.id)) return null;
+    const interrupted = p.ai === 'reading' || p.ai === 'processing';
+    const frac = (v) => (typeof v === 'number' && isFinite(v) ? Math.min(1, Math.max(0, v)) : null);
+    const marks = (Array.isArray(p.marks) ? p.marks : []).slice(0, 60).map(m => {
+      if (!m || typeof m !== 'object') return null;
+      const x = frac(m.x), y = frac(m.y), w = frac(m.w), h = frac(m.h);
+      if ([x, y, w, h].includes(null)) return null;
+      const cw = Math.min(w, 1 - x), ch = Math.min(h, 1 - y);
+      return cw < 0.005 || ch < 0.003 ? null : { x, y, w: cw, h: ch };
+    }).filter(Boolean);
+    const rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 120).map(r => {
+      if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !ID.test(r.id)) return null;
+      const f = r.foreign && typeof r.foreign === 'object' && num(r.foreign.amount) !== null && toCur(r.foreign.currency) ? { amount: num(r.foreign.amount), currency: toCur(r.foreign.currency) } : null;
+      return { id: r.id, date: isISO(r.date) ? r.date : null, description: maskPayment(str(r.description, 60)), amount: num(r.amount), currency: toCur(r.currency),
+        credit: r.credit === true, foreign: f, category: CAT[r.category] ? r.category : 'misc', marked: r.marked === true, claim: r.claim === true,
+        chargeId: typeof r.chargeId === 'string' && ID.test(r.chargeId) ? r.chargeId : null, source: r.source === 'you' ? 'you' : 'ai' };
+    }).filter(Boolean);
+    return { id: p.id, imageId: typeof p.imageId === 'string' && ID.test(p.imageId) ? p.imageId : null, name: str(p.name, 80),
+      w: num(p.w) || 0, h: num(p.h) || 0, card: maskPayment(str(p.card, 40)),
+      ai: interrupted ? 'failed' : (p.ai === 'read' || p.ai === 'failed' ? p.ai : null),
+      aiNote: interrupted ? 'Reading this page was interrupted. Tick and fill in the charges yourself.' : str(p.aiNote, 200), rows, marks };
+  }
+
   const api = {
     MON, DOW, DOW3, PD, CATS, CAT, DAYCOL,
     isISO, parse, iso, addDays, dow, saturdayOf, sundayOf, daysBetween, serial, fmtDDMonYY, fmtMonD, fmtNice, fmtLong, weekTitle,
@@ -894,6 +1103,7 @@
     chargeCAD, chargeIssue, itemizedProblems, itemizedWeeks, itemizedSummary, itemizedCells, itemizedXlsx,
     fileBase, safeName, receiptList, formatCell, drawSheet, pdfForms, pdfReceipts,
     AI_PROMPT, normalizeAi, maskPayment, cleanReport, cleanCharge, cleanSettings,
+    STATEMENT_PROMPT, normalizeStatement, linkStatement, chargeFromRow, statementList, pdfStatement, cleanStatementPage,
     _internal: { parseSheet, serializeSheet, SST, applyCell },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
