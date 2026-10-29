@@ -96,7 +96,8 @@ const Model = {
   set(list) { this.reports = list; emit(); },
   update(id, fn) {
     const cur = this.get(id); if (!cur) return;
-    const next = fn(cur); if (!next || next === cur) return;
+    let next = fn(cur); if (!next || next === cur) return;
+    next = C.reconcile(next); // each charge stays paired with its statement line
     next.updatedAt = Date.now();
     this.reports = this.reports.map(r => (r.id === id ? next : r));
     schedule(next.id); emit();
@@ -268,7 +269,7 @@ function moveToStatements(reportId, chargeId, imageId, blobs) {
   Model.update(reportId, r => {
     const c = r.charges.find(x => x.id === chargeId); if (!c) return r;
     return { ...r, charges: r.charges.filter(x => x.id !== chargeId),
-      statements: [...(r.statements || []), { id: pageId, imageId, name: 'Card statement', w: 0, h: 0, card: '', ai: 'reading', aiNote: '', rows: [], marks: [] }] };
+      statements: [...(r.statements || []), { id: pageId, imageId, name: 'Card statement', w: 0, h: 0, card: '', ai: 'reading', aiNote: '', rows: [] }] };
   });
   toast('That looks like a card statement, so it’s under Bank statement now.');
   Svc.store.getImage(imageId).then(img => { if (img) Model.update(reportId, r => patchPage(r, pageId, p => ({ ...p, w: img.w, h: img.h }))); }).catch(() => {});
@@ -346,7 +347,7 @@ async function addStatementFiles(reportId, files) {
   if (!list.length) { toast('Choose a screenshot, photo, PDF or Word file of your statement.'); return; }
   for (const file of list) {
     const holder = uid('p');
-    Model.update(reportId, r => ({ ...r, statements: [...(r.statements || []), { id: holder, imageId: null, name: String(file.name || 'Statement').slice(0, 60), w: 0, h: 0, card: '', ai: 'processing', aiNote: '', rows: [], marks: [] }] }));
+    Model.update(reportId, r => ({ ...r, statements: [...(r.statements || []), { id: holder, imageId: null, name: String(file.name || 'Statement').slice(0, 60), w: 0, h: 0, card: '', ai: 'processing', aiNote: '', rows: [] }] }));
     try {
       const pages = await processStatementFile(file);
       if (!Svc.store) return;
@@ -361,7 +362,7 @@ async function addStatementFiles(reportId, files) {
       Model.update(reportId, r => {
         const at = (r.statements || []).findIndex(p => p.id === holder); if (at < 0) return r;
         const st = r.statements.slice();
-        st.splice(at, 1, ...made.map(m => ({ id: m.id, imageId: m.imageId, name: m.name, w: m.w, h: m.h, card: '', ai: reading ? 'reading' : null, aiNote: '', rows: [], marks: [] })));
+        st.splice(at, 1, ...made.map(m => ({ id: m.id, imageId: m.imageId, name: m.name, w: m.w, h: m.h, card: '', ai: reading ? 'reading' : null, aiNote: '', rows: [] })));
         return { ...r, statements: st };
       });
       if (reading) for (const m of made) queueAI({ reportId, pageId: m.id, blobs: [m.blob], imageId: m.imageId });
@@ -374,17 +375,18 @@ async function exportStatementPdf(r) {
   const pages = [];
   for (const p of r.statements || []) {
     const img = p.imageId ? await Svc.store.getImage(p.imageId).catch(() => null) : null;
-    pages.push({ data: img && img.blob ? new Uint8Array(await img.blob.arrayBuffer()) : null, w: (img && img.w) || p.w || 1, h: (img && img.h) || p.h || 1, marks: p.marks, label: p.name });
+    pages.push({ data: img && img.blob ? new Uint8Array(await img.blob.arrayBuffer()) : null, w: (img && img.w) || p.w || 1, h: (img && img.h) || p.h || 1, label: p.name });
   }
   if (!pages.length) { toast('There are no statement pages on this report.'); return false; }
   const items = C.statementList(r);
+  const missing = C.statementCheck(r).missing.map(c => (c.date ? C.fmtNice(c.date) : 'Undated') + ' · ' + (C.CAT[c.category] ? C.CAT[c.category].label : 'Charge') + (c.vendor ? ' · ' + c.vendor : '') + (C.chargeCAD(c) !== null ? ' · ' + cad(C.chargeCAD(c)) : ''));
   const s = C.itemizedSummary(r);
   const cards = [...new Set((r.statements || []).map(p => p.card).filter(Boolean))];
   const sub = [(r.customer || 'Untitled') + ' itemized expenses' + (s.first ? ' · ' + rangeText(s.first, s.last) : ''), 'Employee: ' + (r.name || '—')];
   if (cards.length) sub.push('Card: ' + cards.join(', '));
   const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter', compress: true });
   doc.setProperties({ title: C.fileBase(r) + ' Bank Statement', author: r.name || '', creator: ENV.title });
-  C.pdfStatement(doc, { heading: (r.customer || '') + ' · ' + (r.name || '') + ' · bank statement', sub, items, pages, fresh: true });
+  C.pdfStatement(doc, { heading: (r.customer || '') + ' · ' + (r.name || '') + ' · bank statement', sub, items, missing, pages, fresh: true });
   return saveFile(C.fileBase(r) + ' Bank Statement.pdf', doc.output('blob'));
 }
 
@@ -700,7 +702,9 @@ function ItemizedEditor({ r }) {
     const sat = C.saturdayOf(c.date); if (!byWeek.has(sat)) byWeek.set(sat, []); byWeek.get(sat).push(c);
   }
   const weekTotal = (sat) => (sum.weeks.find(w => w.weekEnding === sat) || { total: 0 }).total;
-  const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
+  const chk = (r.statements || []).length ? C.statementCheck(r) : null;
+  const onSt = (c) => !chk ? null : chk.onStatement.has(c.id) ? (chk.onStatement.get(c.id).mismatch ? { state: 'mismatch', amount: chk.onStatement.get(c.id).row.amount } : { state: 'on' }) : chk.ready && c.ai !== 'reading' && c.ai !== 'processing' ? { state: 'missing' } : null;
+  const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} st=${onSt(c)} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
 
   return html`
   <div class="wrap">
@@ -766,7 +770,7 @@ function shortIssue(t) {
   if (/CAD amount/.test(t)) return 'Needs CAD amount';
   return t.replace(/^needs/, 'Needs').replace(/^is still/, 'Still').replace(/^amount/, 'Amount');
 }
-function ChargeItem({ c, open, onToggle, reportId, onView }) {
+function ChargeItem({ c, st, open, onToggle, reportId, onView }) {
   const url = useImageURL(c.imageId);
   const issue = C.chargeIssue(c);
   const cat = C.CAT[c.category];
@@ -777,6 +781,9 @@ function ChargeItem({ c, open, onToggle, reportId, onView }) {
   else {
     if (c.ai === 'read' && !c.checked) chips.push(html`<span class="chip warn"><span class="dot"></span>Check details</span>`);
     if (issue) chips.push(html`<span class="chip bad"><span class="dot"></span>${shortIssue(issue)}</span>`);
+    if (st && st.state === 'on') chips.push(html`<span class="chip ok"><${Icon} n="check" size=${12} />On statement</span>`);
+    if (st && st.state === 'mismatch') chips.push(html`<span class="chip bad"><span class="dot"></span>Statement shows ${cad(st.amount)}</span>`);
+    if (st && st.state === 'missing') chips.push(html`<span class="chip warn"><span class="dot"></span>Not on statement</span>`);
   }
   return html`<div class="charge">
     <button class="charge-row" onClick=${onToggle} aria-expanded=${open}>
@@ -800,7 +807,9 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
     Model.update(reportId, r => {
       const charges = r.charges.filter(x => x.id !== c.id);
       if (c.imageId && Svc.store && !charges.some(x => x.imageId === c.imageId)) Svc.store.deleteImage(c.imageId).catch(() => {});
-      return { ...r, charges };
+      // its statement line comes off the claim too
+      const statements = (r.statements || []).map(p => (p.rows.some(x => x.chargeId === c.id) ? { ...p, rows: p.rows.map(x => (x.chargeId === c.id ? { ...x, chargeId: null, claim: false } : x)) } : p));
+      return { ...r, charges, statements };
     });
   }
   const busy = c.ai === 'processing' || c.ai === 'reading';
@@ -863,37 +872,43 @@ function StatementSection({ r }) {
   const [viewer, setViewer] = useState(null);
   const pages = r.statements || [];
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  const links = C.linkStatement(r);
-  const unlisted = pages.flatMap(p => p.rows).filter(x => x.claim && x.amount !== null && links.get(x.id) && links.get(x.id).how === 'none').length;
+  const chk = C.statementCheck(r);
+  const unlisted = chk.unlisted.length;
   const add = (files) => { if (files && files.length) addStatementFiles(r.id, files); };
   return html`<section class=${'panel stmt' + (drag ? ' drag' : '')} aria-labelledby="stmt-h"
       onDragOver=${e => { e.preventDefault(); setDrag(true); }} onDragLeave=${() => setDrag(false)}
       onDrop=${e => { e.preventDefault(); setDrag(false); if (e.dataTransfer) add(e.dataTransfer.files); }}>
     <div class="panel-h"><h2 id="stmt-h">Bank statement</h2>${pages.length > 0 && html`<span class="muted small">${plural(pages.length, 'page')}</span>`}</div>
     <div class="panel-b">
-      <p class="muted small">Add the card statement pages that show these charges, as screenshots, photos or a PDF. They download as their own PDF, separate from the receipts, with the charges you tick listed first.${aiOn() ? ' Claude reads each page and ticks the charges you marked, or the usual claim types if nothing is marked.' : ''}</p>
+      <p class="muted small">Add the card statement pages that show these charges, as screenshots, photos or a PDF. Each charge on the report is matched to the line that posted to your card, and a receipt in another currency gets its CAD amount from it. The pages download as their own PDF, separate from the receipts.</p>
       <div class="capture-btns">
         ${touch && html`<button class="btn" onClick=${() => camRef.current && camRef.current.click()}><${Icon} n="camera" />Photograph a page</button>`}
         <button class="btn" onClick=${() => upRef.current && upRef.current.click()}><${Icon} n="upload" />Add statement pages</button>
       </div>
       <input ref=${camRef} id="st-cam" class="vh" type="file" accept="image/*" capture="environment" onChange=${e => { add(e.target.files); e.target.value = ''; }} />
       <input ref=${upRef} id="st-up" class="vh" type="file" accept="image/*,application/pdf,.docx" multiple onChange=${e => { add(e.target.files); e.target.value = ''; }} />
-      ${pages.map((p, i) => html`<${StatementPage} key=${p.id} r=${r} p=${p} n=${i + 1} links=${links} onView=${() => setViewer(p.id)} />`)}
-      ${unlisted > 0 && html`<div class="stmt-bar"><span class="small">${plural(unlisted, 'ticked charge')} ${unlisted === 1 ? 'isn’t' : 'aren’t'} on the report yet.</span>
+      ${chk.ready && r.charges.length > 0 && html`<div class=${'stmt-sum' + (chk.missing.length || chk.mismatches.length ? ' warn' : ' ok')}>
+        <${Icon} n=${chk.missing.length || chk.mismatches.length ? 'alert' : 'check'} size=${18} />
+        <span>${chk.onStatement.size} of ${plural(r.charges.length, 'charge')} on the report ${chk.onStatement.size === 1 ? 'is' : 'are'} on your statement.${chk.mismatches.length ? ' ' + plural(chk.mismatches.length, 'amount') + ' ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match.' : ''}${chk.missing.length ? ' Not found: ' + chk.missing.map(c => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'))).join(', ') + '.' : ''}</span>
+      </div>`}
+      ${pages.map((p, i) => html`<${StatementPage} key=${p.id} r=${r} p=${p} n=${i + 1} links=${chk.links} onView=${() => setViewer(p.id)} />`)}
+      ${unlisted > 0 && html`<div class="stmt-bar"><span class="small">${plural(unlisted, 'ticked statement charge')} ${unlisted === 1 ? 'isn’t' : 'aren’t'} on the report yet.</span>
         <button class="btn sm primary" onClick=${() => addUnlisted(r.id, null)}><${Icon} n="plus" size=${16} />Add ${unlisted === 1 ? 'it' : 'them'} to the report</button></div>`}
     </div>
-    ${viewer && pages.some(p => p.id === viewer) && html`<${StatementViewer} r=${r} p=${pages.find(p => p.id === viewer)} onClose=${() => setViewer(null)} />`}
+    ${viewer && pages.some(p => p.id === viewer) && html`<${StatementViewer} p=${pages.find(p => p.id === viewer)} onClose=${() => setViewer(null)} />`}
   </section>`;
 }
+const PAIRED = ['linked', 'same', 'fx'];
 function StatementPage({ r, p, n, links, onView }) {
   const url = useImageURL(p.imageId);
   const [all, setAll] = useState(false);
   const [edit, setEdit] = useState(null);
   const busy = p.ai === 'processing' || p.ai === 'reading';
-  const claimed = p.rows.filter(x => x.claim);
+  const onClaim = (x) => x.claim || (links.get(x.id) && PAIRED.includes(links.get(x.id).how));
+  const claimed = p.rows.filter(onClaim);
   const shown = all ? p.rows : claimed;
   async function remove() {
-    const ok = await askConfirm({ title: 'Remove this statement page?', body: 'The page and its ticked charges come off the statement. Charges already added to the report stay on it.', yes: 'Remove page', danger: true });
+    const ok = await askConfirm({ title: 'Remove this statement page?', body: 'The page comes off the report. Charges already on the report stay on it.', yes: 'Remove page', danger: true });
     if (!ok) return;
     Model.update(r.id, x => ({ ...x, statements: x.statements.filter(q => q.id !== p.id) }));
     if (p.imageId && Svc.store) Svc.store.deleteImage(p.imageId).catch(() => {});
@@ -906,23 +921,20 @@ function StatementPage({ r, p, n, links, onView }) {
   let status;
   if (p.ai === 'processing') status = html`<span class="chip info"><span class="spin"></span>Adding page</span>`;
   else if (p.ai === 'reading') status = html`<span class="chip info"><span class="spin"></span>Reading statement</span>`;
-  else if (p.rows.length) status = html`<span class="chip ok"><${Icon} n="check" size=${14} />${plural(claimed.length, 'charge')} ticked of ${p.rows.length}</span>`;
+  else if (p.rows.length) status = html`<span class="chip info">${plural(claimed.length, 'charge')} on the claim, of ${p.rows.length} lines</span>`;
   return html`<div class="stmt-page">
     <div class="stmt-head">
-      <button class="thumb stmt-thumb" onClick=${onView} disabled=${!url} aria-label=${'View and mark statement page ' + n}>${url ? html`<img src=${url} alt="" />` : busy ? html`<span class="spin"></span>` : html`<${Icon} n="receipt" />`}</button>
+      <button class="thumb stmt-thumb" onClick=${onView} disabled=${!url} aria-label=${'View statement page ' + n}>${url ? html`<img src=${url} alt="" />` : busy ? html`<span class="spin"></span>` : html`<${Icon} n="receipt" />`}</button>
       <div style="display:grid;gap:4px;min-width:0">
         <b>Page ${n}<span class="muted" style="font-weight:400">${p.name ? ' · ' + p.name : ''}${p.card ? ' · ' + p.card : ''}</span></b>
-        <span class="l2">${status}${p.marks.length > 0 && html`<span class="chip info">${plural(p.marks.length, 'box', 'boxes')} drawn</span>`}</span>
-        <div class="row-btns">
-          <button class="btn sm" onClick=${onView} disabled=${!url}>Mark charges</button>
-          <button class="btn sm ghost danger" onClick=${remove}><${Icon} n="trash" size=${16} />Remove</button>
-        </div>
+        <span class="l2">${status}</span>
+        <div class="row-btns"><button class="btn sm ghost danger" onClick=${remove}><${Icon} n="trash" size=${16} />Remove page</button></div>
       </div>
     </div>
     ${p.aiNote && html`<p class="small" style="color:var(--warn)">${p.aiNote}</p>`}
     ${shown.length > 0 && html`<ul class="stmt-rows">${shown.map(x => html`<${StatementRow} key=${x.id} r=${r} p=${p} x=${x} link=${links.get(x.id)} editing=${edit === x.id} onEdit=${() => setEdit(edit === x.id ? null : x.id)} />`)}</ul>`}
     <div class="row-btns">
-      ${p.rows.length > claimed.length && html`<button class="linkbtn" onClick=${() => setAll(!all)}>${all ? 'Show only ticked charges' : 'Show all ' + p.rows.length + ' rows'}</button>`}
+      ${p.rows.length > claimed.length && html`<button class="linkbtn" onClick=${() => setAll(!all)}>${all ? 'Show only charges on the claim' : 'Show all ' + p.rows.length + ' lines'}</button>`}
       ${!busy && html`<button class="linkbtn" onClick=${addRow}>Add a charge from this page</button>`}
     </div>
   </div>`;
@@ -931,20 +943,28 @@ function StatementRow({ r, p, x, link, editing, onEdit }) {
   const set = (patch) => Model.update(r.id, q => patchRow(q, p.id, x.id, patch));
   const id = (k) => 'sr-' + x.id + '-' + k;
   const c = link && link.charge;
+  const paired = link && PAIRED.includes(link.how);
+  const what = c ? (C.CAT[c.category] ? C.CAT[c.category].label : 'charge') + (c.vendor ? ' · ' + c.vendor : '') : '';
   let state = null;
-  if (x.claim && x.amount !== null && link) {
-    if (link.how === 'linked' || link.how === 'same') state = html`<span class="chip ok"><${Icon} n="check" size=${14} />On the report: ${C.CAT[c.category] ? C.CAT[c.category].label : 'charge'}${c.vendor ? ' · ' + c.vendor : ''}</span>`;
-    else if (link.how === 'cad') state = html`<button class="btn sm" onClick=${() => Model.update(r.id, q => patchRow(patchCharge(q, c.id, { cad: x.amount }), p.id, x.id, { chargeId: c.id }))}>
-      Use ${cad(x.amount)} as the CAD for ${c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'the charge')} (${c.currency} ${C.round2(c.amount || 0).toFixed(2)})</button>`;
-    else state = html`<span class="chip warn"><span class="dot"></span>Not on the report</span>`;
-  }
+  if (paired) {
+    const v = C.chargeCAD(c);
+    const off = (x.currency || 'CAD') === 'CAD' && v !== null && Math.abs(v - x.amount) >= 0.005;
+    state = off
+      ? html`<span class="chip bad"><span class="dot"></span>The report has ${cad(v)} for ${what}</span>
+          <button class="btn sm" onClick=${() => Model.update(r.id, q => patchCharge(q, c.id, c.currency === 'CAD' ? { amount: x.amount } : { cad: x.amount }))}>Use ${cad(x.amount)} from the statement</button>`
+      : html`<span class="chip ok"><${Icon} n="check" size=${14} />On the report: ${what}</span>`;
+  } else if (link && link.how === 'cad') {
+    state = html`<button class="btn sm" onClick=${() => Model.update(r.id, q => patchRow(patchCharge(q, c.id, { cad: x.amount }), p.id, x.id, { chargeId: c.id }))}>
+      Is this ${c.vendor || 'the charge'} (${c.currency} ${C.round2(c.amount || 0).toFixed(2)})? Use ${cad(x.amount)} as its CAD</button>`;
+  } else if (link && link.how === 'dupe') state = html`<span class="chip info">Also on another page</span>`;
+  else if (x.claim && x.amount !== null) state = html`<span class="chip warn"><span class="dot"></span>Not on the report</span>`;
   const fx = x.foreign ? x.foreign.currency + ' ' + x.foreign.amount.toFixed(2) : '';
-  return html`<li class=${'stmt-row' + (x.claim ? ' on' : '')}>
+  return html`<li class=${'stmt-row' + (x.claim || paired ? ' on' : '')}>
     <div class="stmt-line">
-      <input id=${id('claim')} type="checkbox" checked=${x.claim} disabled=${x.credit} aria-label=${'Claim ' + (x.description || 'this charge')} onChange=${e => set({ claim: e.target.checked })} />
-      <label for=${id('claim')} class="stmt-desc"><span class="d mono">${x.date ? C.fmtMonD(x.date) : '—'}</span><span>${x.description || html`<span class="faint">No description</span>`}${fx && html`<span class="faint"> · ${fx}</span>`}${x.credit && html`<span class="faint"> · credit</span>`}${x.marked && html`<span class="faint"> · marked</span>`}</span></label>
+      <input id=${id('claim')} type="checkbox" checked=${!!(x.claim || paired)} disabled=${x.credit || paired} aria-label=${'Claim ' + (x.description || 'this charge')} onChange=${e => set({ claim: e.target.checked })} />
+      <label for=${id('claim')} class="stmt-desc"><span class="d mono">${x.date ? C.fmtMonD(x.date) : '—'}</span><span>${x.description || html`<span class="faint">No description</span>`}${fx && html`<span class="faint"> · ${fx}</span>`}${x.credit && html`<span class="faint"> · credit</span>`}</span></label>
       <span class="mono stmt-amt">${x.amount !== null ? C.round2(x.amount).toFixed(2) : '—'}</span>
-      <button class="icon-btn sm" onClick=${onEdit} aria-label=${'Edit ' + (x.description || 'this row')} aria-expanded=${editing}><${Icon} n="edit" size=${16} /></button>
+      <button class="icon-btn sm" onClick=${onEdit} aria-label=${'Edit ' + (x.description || 'this line')} aria-expanded=${editing}><${Icon} n="edit" size=${16} /></button>
     </div>
     ${state && html`<div class="stmt-state">${state}</div>`}
     ${editing && html`<div class="fields stmt-edit">
@@ -954,47 +974,16 @@ function StatementRow({ r, p, x, link, editing, onEdit }) {
       <${Field} id=${id('cat')} label="Type, if added to the report">
         <select id=${id('cat')} class="inp" value=${x.category} onChange=${e => set({ category: e.target.value })}>${C.CATS.map(k => html`<option value=${k.key}>${k.label}</option>`)}</select>
       <//>
-      <div class="row-btns"><button class="btn sm" onClick=${onEdit}>Done</button>${x.source === 'you' && html`<button class="btn sm ghost danger" onClick=${() => Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, rows: pg.rows.filter(y => y.id !== x.id) })))}>Delete row</button>`}</div>
+      <div class="row-btns"><button class="btn sm" onClick=${onEdit}>Done</button>${x.source === 'you' && html`<button class="btn sm ghost danger" onClick=${() => Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, rows: pg.rows.filter(y => y.id !== x.id) })))}>Delete line</button>`}</div>
     </div>`}
   </li>`;
 }
-// Full-size page where the person boxes the charges they're claiming, as they would with a red pen
-function StatementViewer({ r, p, onClose }) {
+function StatementViewer({ p, onClose }) {
   const url = useImageURL(p.imageId);
-  const box = useRef(null);
-  const [mode, setMode] = useState('mark');
-  const [draft, setDraft] = useState(null);
-  const [undo, setUndo] = useState([]);
-  const start = useRef(null);
-  const setMarks = (marks) => { setUndo(u => [...u.slice(-20), p.marks]); Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, marks }))); };
-  const at = (e) => { const b = box.current.getBoundingClientRect(); return { x: Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)), y: Math.min(1, Math.max(0, (e.clientY - b.top) / b.height)) }; };
-  const rect = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
-  const down = (e) => { if (mode !== 'mark' || e.button > 0) return; e.preventDefault(); box.current.setPointerCapture(e.pointerId); start.current = at(e); setDraft(rect(start.current, start.current)); };
-  const move = (e) => { if (start.current) setDraft(rect(start.current, at(e))); };
-  const up = (e) => {
-    if (!start.current) return;
-    const m = rect(start.current, at(e)); start.current = null; setDraft(null);
-    if (m.w > 0.02 && m.h > 0.006) setMarks([...p.marks, m]);
-  };
-  const pct = (m) => 'left:' + (m.x * 100) + '%;top:' + (m.y * 100) + '%;width:' + (m.w * 100) + '%;height:' + (m.h * 100) + '%';
   return html`<div class="scrim" onClick=${e => { if (e.target === e.currentTarget) onClose(); }}>
     <div class="sheet viewer stmt-viewer" role="dialog" aria-label="Statement page">
       <div class="sheet-h"><h2>${p.name || 'Statement page'}</h2><button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
-      <div class="seg" role="group" aria-label="What dragging does">
-        <button type="button" aria-pressed=${mode === 'mark'} onClick=${() => setMode('mark')}>Draw boxes</button>
-        <button type="button" aria-pressed=${mode === 'scroll'} onClick=${() => setMode('scroll')}>Scroll</button>
-      </div>
-      <p class="small muted">${mode === 'mark' ? 'Drag across each charge you’re claiming to box it in red, the way you would with a pen. Tap a box to remove it. The boxes print on the statement PDF.' : 'Scroll to see the whole page, then switch back to Draw boxes.'}</p>
-      ${url ? html`<div class=${'marker' + (mode === 'mark' ? ' on' : '')} ref=${box} onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${() => { start.current = null; setDraft(null); }}>
-          <img src=${url} alt="Statement page" draggable="false" />
-          ${p.marks.map((m, i) => html`<button type="button" class="mark" style=${pct(m)} aria-label=${'Remove box ' + (i + 1)} onPointerDown=${e => e.stopPropagation()} onClick=${e => { e.stopPropagation(); setMarks(p.marks.filter((_, k) => k !== i)); }}></button>`)}
-          ${draft && html`<span class="mark draft" style=${pct(draft)}></span>`}
-        </div>` : html`<div class="skel" style="height:300px"></div>`}
-      <div class="row-btns">
-        <button class="btn sm" disabled=${!undo.length} onClick=${() => { const last = undo[undo.length - 1]; setUndo(undo.slice(0, -1)); Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, marks: last }))); }}>Undo</button>
-        <button class="btn sm" disabled=${!p.marks.length} onClick=${() => setMarks([])}>Clear boxes</button>
-        <button class="btn sm primary" style="margin-left:auto" onClick=${onClose}>Done</button>
-      </div>
+      ${url ? html`<img src=${url} alt="Statement page" />` : html`<div class="skel" style="height:300px"></div>`}
     </div>
   </div>`;
 }
@@ -1032,13 +1021,15 @@ function ExportSheet({ r, onClose }) {
     const pages = r.statements || [];
     const stReading = pages.filter(p => p.ai === 'reading' || p.ai === 'processing').length;
     if (stReading) warns.push(plural(stReading, 'statement page') + ' still being read.');
-    const links = C.linkStatement(r);
-    const stLeft = pages.flatMap(p => p.rows).filter(x => x.claim && links.get(x.id) && links.get(x.id).how === 'none').length;
-    if (stLeft) warns.push(plural(stLeft, 'charge') + ' ticked on your statement ' + (stLeft === 1 ? 'isn’t' : 'aren’t') + ' on the report. The statement PDF lists ' + (stLeft === 1 ? 'it' : 'them') + ' as “Not on the report”.');
-    const stCad = pages.flatMap(p => p.rows).filter(x => x.claim && links.get(x.id) && links.get(x.id).how === 'cad').length;
-    if (stCad) warns.push('Your statement shows the CAD for ' + plural(stCad, 'foreign-currency charge') + '. Use ' + (stCad === 1 ? 'it' : 'them') + ' under Bank statement.');
+    if (pages.length) {
+      const chk = C.statementCheck(r);
+      if (chk.missing.length) warns.push(plural(chk.missing.length, 'charge') + ' on the report ' + (chk.missing.length === 1 ? 'isn’t' : 'aren’t') + ' on your bank statement: ' + chk.missing.map(c => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'))).join(', ') + '. Add the statement page that shows ' + (chk.missing.length === 1 ? 'it' : 'them') + '.');
+      if (chk.mismatches.length) warns.push(plural(chk.mismatches.length, 'charge') + ' on the report ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match the amount on your statement. Fix ' + (chk.mismatches.length === 1 ? 'it' : 'them') + ' under Bank statement.');
+      if (chk.unlisted.length) warns.push(plural(chk.unlisted.length, 'charge') + ' ticked on your statement ' + (chk.unlisted.length === 1 ? 'isn’t' : 'aren’t') + ' on the report.');
+      if (chk.suggestions.length) warns.push('Your statement may show the CAD for ' + plural(chk.suggestions.length, 'foreign-currency charge') + '. Check under Bank statement.');
+    }
   }
-  const stTicked = isPd ? 0 : (r.statements || []).flatMap(p => p.rows).filter(x => x.claim).length;
+  const stTicked = isPd ? 0 : C.statementList(r).length;
   const partialDates = isPd ? sum.weeks.flatMap(w => w.days).filter(d => d.partial).map(d => C.fmtNice(d.date)) : [];
   async function run(kind) {
     setBusy(kind);
@@ -1084,7 +1075,7 @@ function ExportSheet({ r, onClose }) {
       ${!isPd && html`<div class="out-group">
         <span class="caps muted">Bank statement${(r.statements || []).length ? ' · ' + plural(r.statements.length, 'page') : ''}</span>
         ${!(r.statements || []).length ? html`<p class="small muted">No statement pages on this report. Add them under Bank statement to download them here.</p>`
-          : html`<${OutButton} ext="PDF" title="Bank statement PDF" sub=${(stTicked ? 'The ' + plural(stTicked, 'charge') + ' you ticked, then ' : 'Your ') + 'statement pages, with your red boxes'} busy=${busy === 'stmt'} disabled=${!!busy} onClick=${() => run('stmt')} />`}
+          : html`<${OutButton} ext="PDF" title="Bank statement PDF" sub=${(stTicked ? 'The ' + plural(stTicked, 'statement charge') + ' on the claim, each with its report charge, then ' : 'Your ') + 'statement pages'} busy=${busy === 'stmt'} disabled=${!!busy} onClick=${() => run('stmt')} />`}
       </div>`}
       <p class="faint small">File name: ${C.fileBase(r)}</p>
     </div>

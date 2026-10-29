@@ -110,55 +110,77 @@ test('statements: Claude’s answer is validated and card numbers are masked', (
   assert.deepStrictEqual(r.foreign, { amount: 26.85, currency: 'USD' });
   assert.strictEqual(C.normalizeStatement({ rows: new Array(200).fill({ amount: 1 }) }).rows.length, 80);
 });
-test('statements: ticked rows are matched to the report’s charges, each charge once', () => {
+test('statements: each charge is paired with the line that posted, once', () => {
   const row = (id, date, amount, description, extra) => ({ id, date, amount, description, currency: 'CAD', claim: true, chargeId: null, foreign: null, category: 'taxi', ...extra });
-  const r = { charges: [
+  const r = { type: 'itemized', charges: [
     { id: 'c1', date: '2026-04-29', category: 'taxi', vendor: 'Uber', amount: 26.85, currency: 'USD', cad: null },
     { id: 'c2', date: '2026-05-10', category: 'rental', vendor: 'Budget', amount: 980.25, currency: 'CAD' },
     { id: 'c3', date: '2026-05-03', category: 'taxi', vendor: 'Lyft', amount: 14.10, currency: 'USD', cad: null },
-  ], statements: [{ rows: [
+    { id: 'c4', date: '2026-05-06', category: 'parking', vendor: 'Impark', amount: 31.50, currency: 'CAD', approved: true },
+    { id: 'c5', date: '2026-05-20', category: 'fuel', vendor: 'Esso', amount: 40, currency: 'CAD' },
+  ], statements: [{ ai: 'read', rows: [
     row('a', '2026-04-30', 36.93, 'UBER *TRIP', { foreign: { amount: 26.85, currency: 'USD' } }),
     row('b', '2026-05-11', 980.25, 'BUDGET RENT A CAR'),
     row('c', '2026-05-11', 980.25, 'BUDGET RENT A CAR'),
     row('d', '2026-05-04', 19.40, 'LYFT *RIDE SUN'),
     row('e', '2026-05-20', 50, 'SHELL'),
-    row('f', '2026-05-20', 9, 'IGNORED', { claim: false }),
+    row('f', '2026-05-06', 31.50, 'IMPARK 1234', { claim: false }),
+    row('g', '2026-05-20', 9, 'IGNORED', { claim: false }),
+    row('h', '2026-05-02', 500, 'PAYMENT', { credit: true, claim: false }),
   ] }] };
   const l = C.linkStatement(r);
-  assert.strictEqual(l.get('a').how, 'cad'); assert.strictEqual(l.get('a').charge.id, 'c1');
+  assert.strictEqual(l.get('a').how, 'fx', 'the original USD amount on the line'); assert.strictEqual(l.get('a').charge.id, 'c1');
   assert.strictEqual(l.get('b').how, 'same'); assert.strictEqual(l.get('b').charge.id, 'c2');
-  assert.strictEqual(l.get('c').how, 'none', 'a charge is matched once');
-  assert.strictEqual(l.get('d').how, 'cad', 'same vendor, same days, missing CAD'); assert.strictEqual(l.get('d').charge.id, 'c3');
-  assert.strictEqual(l.get('e').how, 'none'); assert.ok(!l.has('f'));
-  r.statements.push({ rows: [row('a2', '2026-05-11', 980.25, 'BUDGET RENT A CAR')] });
-  assert.strictEqual(C.linkStatement(r).get('a2').charge.id, 'c2', 'the same row on a page added twice isn’t a new charge');
-  r.statements[0].rows[2].chargeId = 'c2';
-  assert.strictEqual(C.linkStatement(r).get('c').how, 'linked', 'an explicit link wins');
+  assert.strictEqual(l.get('c').how, 'none', 'two identical lines on one page are two charges');
+  assert.strictEqual(l.get('d').how, 'cad', 'same vendor and days, no USD amount shown: offered, not applied'); assert.strictEqual(l.get('d').charge.id, 'c3');
+  assert.strictEqual(l.get('e').how, 'none');
+  assert.strictEqual(l.get('f').how, 'same', 'an unticked line still pairs with its charge');
+  assert.ok(!l.has('g') && !l.has('h'));
+  const chk = C.statementCheck(r);
+  assert.deepStrictEqual(chk.missing.map(c => c.id), ['c3', 'c5'], 'charges not on the statement');
+  assert.strictEqual(chk.unlisted.length, 2); assert.strictEqual(chk.suggestions.length, 1);
+  // reconcile records the pairs and fills in the CAD that posted
+  const rr = C.reconcile(r);
+  assert.strictEqual(rr.charges.find(c => c.id === 'c1').cad, 36.93);
+  assert.strictEqual(rr.charges.find(c => c.id === 'c3').cad, null, 'a guess is never applied');
+  const rows = rr.statements[0].rows;
+  assert.strictEqual(rows.find(x => x.id === 'a').chargeId, 'c1');
+  assert.strictEqual(rows.find(x => x.id === 'f').claim, true, 'a line paired with a charge is on the claim');
+  assert.strictEqual(C.reconcile(rr), rr, 'nothing more to do the second time');
+  // an edited charge stays paired, and the difference shows
+  const edited = { ...rr, charges: rr.charges.map(c => (c.id === 'c2' ? { ...c, amount: 990 } : c)) };
+  const m = C.statementCheck(edited).mismatches;
+  assert.strictEqual(m.length, 1); assert.strictEqual(m[0].row.id, 'b');
+  // the same line on a second page isn't a new charge
+  rr.statements.push({ ai: 'read', rows: [row('b2', '2026-05-11', 980.25, 'BUDGET RENT A CAR')] });
+  assert.strictEqual(C.linkStatement(rr).get('b2').how, 'dupe');
+  assert.ok(!C.statementList(rr).some(it => it.row.id === 'b2'), 'listed once in the PDF');
   const made = C.chargeFromRow(r.statements[0].rows[4], 'c9');
   assert.strictEqual(made.amount, 50); assert.strictEqual(made.currency, 'CAD'); assert.strictEqual(made.checked, false); assert.strictEqual(made.imageId, null);
 });
 test('statements: stored pages are validated on load', () => {
   const r = C.cleanReport({ id: 'r1', type: 'itemized', charges: [{ id: 'c1', category: 'taxi' }], statements: [
-    { id: 'p1', imageId: 'i1', ai: 'reading', marks: [{ x: 0.1, y: 0.1, w: 0.5, h: 0.05 }, { x: 2, y: 0, w: 1, h: 1 }, { x: 0.99, y: 0.5, w: 0.5, h: 0.1 }, 'x'],
+    { id: 'p1', imageId: 'i1', ai: 'reading', marks: [{ x: 0.1, y: 0.1, w: 0.5, h: 0.05 }],
       rows: [{ id: 's1', description: 'card 4111 1111 1111 1111', amount: 5, claim: true, chargeId: 'c1' }, { id: 's2', amount: 5, claim: true, chargeId: 'gone' }, { id: '../x' }] },
     { id: 'bad/id' }, 'junk'] });
   assert.strictEqual(r.statements.length, 1);
   const p = r.statements[0];
   assert.strictEqual(p.ai, 'failed'); assert.match(p.aiNote, /interrupted/);
-  assert.strictEqual(p.marks.length, 2); assert.ok(p.marks.every(m => m.x + m.w <= 1 && m.y + m.h <= 1));
+  assert.ok(!('marks' in p), 'unknown fields are dropped');
   assert.strictEqual(p.rows.length, 2); assert.ok(!/1111 1111/.test(p.rows[0].description));
   assert.strictEqual(p.rows[0].chargeId, 'c1'); assert.strictEqual(p.rows[1].chargeId, null, 'a link to a deleted charge is dropped');
   assert.deepStrictEqual(C.cleanReport({ id: 'r2', type: 'itemized' }).statements, []);
 });
-test('statements: the PDF lists the ticked charges, then one page per statement page', () => {
+test('statements: the PDF lists the lines on the claim and what’s missing, then one page per statement page', () => {
   const { jsPDF } = require('jspdf');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
   const jpg = new Uint8Array(fs.readFileSync(path.join(__dirname, 'fixtures', 'sample.jpg')));
   const r = { charges: [], statements: [{ rows: [{ id: 's1', date: '2026-05-01', description: 'UBER TRIP', amount: 36.93, currency: 'CAD', claim: true }] }] };
-  C.pdfStatement(doc, { heading: 'Test', sub: ['Employee: Alex'], items: C.statementList(r), pages: [{ data: jpg, w: 600, h: 1400, marks: [{ x: 0.1, y: 0.1, w: 0.5, h: 0.05 }] }, { data: jpg, w: 600, h: 1400, marks: [] }], fresh: true });
+  C.pdfStatement(doc, { heading: 'Test', sub: ['Employee: Alex'], items: C.statementList(r), missing: ['Sun, May 3 · Taxi / Uber · Lyft · CA$19.40'], pages: [{ data: jpg, w: 600, h: 1400 }, { data: jpg, w: 600, h: 1400 }], fresh: true });
   assert.strictEqual(doc.getNumberOfPages(), 3);
   const out = doc.output();
   assert.ok(out.includes('UBER TRIP') && out.includes('Not on the report') && out.includes('Statement page 2 of 2'));
+  assert.ok(out.includes('not found on these statement pages') && out.includes('Lyft'), 'charges missing from the statement are listed');
 });
 
 /* ---------- web server building blocks (server/) ---------- */

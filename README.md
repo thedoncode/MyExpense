@@ -29,9 +29,10 @@ There are two environments, **production** (`main` branch) and **QA** (`qa` bran
 - Amounts are the CAD that posted to the card. Foreign-currency receipts ask for that CAD amount; the app never converts.
 - One sheet per week that has charges; each charge goes on its category row and day column; HST left blank; every date in row 10 filled.
 - **Bank statement:** add the card statement pages that back the claim (screenshots, photos, a PDF or a Word file):
-  - Claude lists every row on each page and ticks the ones the person marked, or the usual claim types if nothing is marked.
-  - Ticked rows are matched to the report's charges. A US-dollar receipt gets its CAD amount from the statement in one tap, and rows not on the report can be added as charges.
-  - The person can box each claimed charge in red on the page itself.
+  - Claude lists every line on each page.
+  - Each charge on the report is paired with the line that posted to the card. A US-dollar receipt gets its CAD amount from its line automatically.
+  - The app flags any charge that isn't on the statement, and any whose amount differs from it.
+  - Lines ticked on the statement but missing from the report can be added as charges.
   - A statement added with the receipts moves to this section by itself.
 
 **Downloads**
@@ -42,7 +43,7 @@ There are two environments, **production** (`main` branch) and **QA** (`qa` bran
 | Receipts PDF (itemized) | `… Receipts.pdf`, two per page, numbered, labelled with date, type, vendor and CAD amount |
 | Receipt files (itemized) | `… Receipts.zip`, e.g. `01 2026-04-29 Taxi - Uber - CA$36.93.jpg`; PDF receipts stay PDFs |
 | One receipt | from the photo viewer |
-| Bank statement (itemized) | `… Bank Statement.pdf`: the ticked statement charges listed with where each one is on the claim, then each statement page with the person's red boxes |
+| Bank statement (itemized) | `… Bank Statement.pdf`: the statement lines on the claim, each with the report charge it corresponds to, any report charges not found on the statement, then the statement pages |
 
 The full rules are in [`docs/`](docs): the per diem and itemized generator specs the app implements.
 
