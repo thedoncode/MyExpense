@@ -293,9 +293,24 @@ async function waitStep() { // a fresh 30-second window, so a code can't collide
       const r = await alex.post('/api/receipts/i2/read', { today: '2026-05-02' });
       assert.strictEqual(r.status, 429); assert.strictEqual(r.json.code, 'rate_limited');
     });
+    await check('a statement page is read with the statement prompt, from the page image, and the rows come back validated', async () => {
+      H.ai.replies.push({ text: '{"kind":"statement","card":"VISA 4111111111114412","rows":[{"date":"2026-05-01","description":"UBER *TRIP 4111111111111111","amount":36.93,"currency":"CAD","credit":false,"foreign":{"amount":26.85,"currency":"USD"},"category":"uber","marked":true},{"date":"2026-05-02","description":"PAYMENT","amount":-50,"currency":"CAD","credit":true,"category":"other","marked":true}]}' });
+      const r = await alex.post('/api/receipts/i1/read', { today: new Date().toISOString().slice(0, 10), kind: 'statement' });
+      assert.strictEqual(r.status, 200, JSON.stringify(r.json));
+      assert.strictEqual(r.json.card, 'VISA ••4412');
+      assert.strictEqual(r.json.rows.length, 2);
+      assert.strictEqual(r.json.rows[0].claim, true); assert.strictEqual(r.json.rows[0].category, 'taxi'); assert.ok(!/4111111111111111/.test(r.json.rows[0].description));
+      assert.strictEqual(r.json.rows[1].claim, false, 'credits are never ticked');
+      const call = H.ai.calls[H.ai.calls.length - 1].body;
+      assert.strictEqual(call.messages[0].content[0].type, 'image', 'the page image, not the PDF');
+      assert.ok(call.messages[0].content[1].text.startsWith('You are reading one page'));
+      const odd = await alex.post('/api/receipts/i2/read', { today: new Date().toISOString().slice(0, 10), kind: 'anything else' });
+      assert.ok(H.ai.calls[H.ai.calls.length - 1].body.messages[0].content[1].text.startsWith('You are reading a photo'), 'any other kind is a receipt');
+      void odd;
+    });
     await check('a daily limit per person', async () => {
       const keep = H.cfg.ai.dailyLimit;
-      H.cfg.ai.dailyLimit = 3;
+      H.cfg.ai.dailyLimit = 5;
       try { const r = await alex.post('/api/receipts/i2/read', { today: '2026-05-02' }); assert.strictEqual(r.status, 429); assert.strictEqual(r.json.code, 'ai_limit'); }
       finally { H.cfg.ai.dailyLimit = keep; }
     });

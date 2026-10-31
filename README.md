@@ -28,6 +28,12 @@ There are two environments, **production** (`main` branch) and **QA** (`qa` bran
 - Usual categories: Taxi/Uber, Auto Rental, Air Fare (baggage fees), Fuel. Parking and every other row need an explicit "Include" tick.
 - Amounts are the CAD that posted to the card. Foreign-currency receipts ask for that CAD amount; the app never converts.
 - One sheet per week that has charges; each charge goes on its category row and day column; HST left blank; every date in row 10 filled.
+- **Bank statement:** add the card statement pages that back the claim (screenshots, photos, a PDF or a Word file):
+  - Claude lists every line on each page and ticks the ones you marked, or the usual claim types if nothing is marked.
+  - Every ticked line goes on the report, with or without a receipt.
+  - Each charge is paired with its line. A US-dollar receipt gets its CAD amount from its line automatically, and a receipt added after the statement joins the charge its line made, so nothing is counted twice.
+  - The app points out every missing receipt, any charge that isn't on the statement, and any amount that differs. A receipt can be attached to a charge that has none.
+  - A statement added with the receipts moves to this section by itself.
 
 **Downloads**
 | File | Name |
@@ -37,6 +43,8 @@ There are two environments, **production** (`main` branch) and **QA** (`qa` bran
 | Receipts PDF (itemized) | `… Receipts.pdf`, two per page, numbered, labelled with date, type, vendor and CAD amount |
 | Receipt files (itemized) | `… Receipts.zip`, e.g. `01 2026-04-29 Taxi - Uber - CA$36.93.jpg`; PDF receipts stay PDFs |
 | One receipt | from the photo viewer |
+| Bank statement (itemized) | `… Bank Statement.pdf`: the statement lines on the claim, each with the report charge it corresponds to (and whether it has a receipt), any report charges not found on the statement, then the statement pages |
+| Statement files (itemized) | `… Bank Statement files.zip`: the statements as uploaded. PDFs come back exactly as they were; screenshots and photos come back as pictures. |
 
 The full rules are in [`docs/`](docs): the per diem and itemized generator specs the app implements.
 
