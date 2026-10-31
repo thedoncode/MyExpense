@@ -20,20 +20,21 @@ fs.mkdirSync(OUT, { recursive: true });
 const NM = path.join(ROOT, 'node_modules');
 // every library URL the app references, served from the locked node_modules copy
 const LIBS = {};
-for (const f of [path.join(ROOT, 'src', 'app.src.html')]) {
+for (const f of [path.join(ROOT, 'src', 'shell-claude.html'), path.join(ROOT, 'src', 'vendor.json')]) {
   const html = fs.readFileSync(f, 'utf8');
   for (const m of html.matchAll(/https:\/\/cdn\.jsdelivr\.net\/npm\/((?:@[^/]+\/)?[^@/]+)@[^/]+\/([^"'\s]+)/g)) LIBS[m[0]] = path.join(m[1], m[2]);
 }
 const envs = JSON.parse(fs.readFileSync(path.join(ROOT, 'environments.json'), 'utf8'));
 const pageFor = (env) => {
-  const body = fs.readFileSync(path.join(ROOT, 'dist', env, envs[env].title.replace(/\s+/g, '-') + '.html'), 'utf8');
+  const file = env === 'preview' ? 'MyExpense-Preview.html' : envs[env].title.replace(/\s+/g, '-') + '.html';
+  const body = fs.readFileSync(path.join(ROOT, 'dist', env, file), 'utf8');
   // the Artifact wraps the page in this skeleton
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>' + body + '</body></html>';
 };
 
 /* ---------- stand-in server: one database per environment, rules enforced here ---------- */
 const RANK = { view: 0, interact: 1, admin: 2, owner: 3 };
-const servers = { prod: new Map(), qa: new Map() };
+const servers = { prod: new Map(), qa: new Map(), preview: new Map() };
 function allowed(who, p) {
   const seg = p.split('/');
   if (seg[0] === 'data' && seg[1] === 'users' && seg.length >= 4) return seg[2] === who.id && RANK[who.level] >= RANK.interact; // data/users/{self}
@@ -64,13 +65,20 @@ const RUNTIME = `
   const colRef = (p) => ({ path: p, doc: (id) => docRef(p + '/' + id), get: () => list(p), limit: (n) => ({ get: () => list(p, n) }) });
   window.__downloads = [];
   let n = 0;
-  const R = [
+  const R = who.R || [
     { kind: 'receipt', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, payment: 'Visa 4412' }] },
     { kind: 'receipt', transactions: [{ date: '2026-05-10', vendor: 'Budget', category: 'rental', amount: 980.25, currency: 'CAD', payment: 'Visa 4412' }] },
   ];
+  // A statement page: what Claude returns for the statement prompt
+  const STMT = { kind: 'statement', card: 'Visa 4412', rows: [
+    { date: '2026-04-29', description: 'UBER *TRIP HELP.UBER.COM', amount: 36.93, currency: 'CAD', credit: false, foreign: { amount: 26.85, currency: 'USD' }, category: 'taxi', marked: true },
+    { date: '2026-04-30', description: 'STARBUCKS 0412', amount: 6.45, currency: 'CAD', credit: false, foreign: null, category: 'meal', marked: false },
+    { date: '2026-05-10', description: 'BUDGET RENT-A-CAR LAX', amount: 980.25, currency: 'CAD', credit: false, foreign: null, category: 'rental', marked: true },
+    { date: '2026-05-02', description: 'PAYMENT - THANK YOU', amount: 500, currency: 'CAD', credit: true, foreign: null, category: 'other', marked: false },
+  ] };
   const sample = Object.assign(async () => ({ text: '' }), {
     limits: async () => ({ maxInputBytes: 1e6, images: { maxCount: 5, maxInputBytes: 5e6, mediaTypes: ['image/jpeg', 'image/png'] } }),
-    json: async (prompt, opts) => { if (!opts.images || !opts.images.length) throw { code: 'invalid_argument' }; await new Promise(r => setTimeout(r, 200)); return R[Math.min(n++, R.length - 1)]; } });
+    json: async (prompt, opts) => { if (!opts.images || !opts.images.length) throw { code: 'invalid_argument' }; await new Promise(r => setTimeout(r, 200)); if (/one page .* of a bank or credit card statement/.test(prompt)) return STMT; return R[Math.min(n++, R.length - 1)]; } });
   const caps = who.signedIn ? {
     db: { doc: docRef, collection: colRef },
     user: { id: async () => who.id, can: async () => null, isOwner: async () => who.level === 'owner' },
@@ -91,7 +99,7 @@ async function open(browser, { env = 'prod', who = null, dark = false } = {}) {
     if (u === 'https://myexpense.test/') return route.fulfill({ status: 200, contentType: 'text/html', body: pageFor(env) });
     return route.fulfill({ status: 404, body: '' }); // web fonts are unavailable offline
   });
-  const store = servers[env];
+  const store = servers[env] || new Map();
   await ctx.exposeFunction('__db', (op, p, d, o) => serverOp(store, who && who.signedIn ? who : null, op, p, d, o));
   if (who) await ctx.addInitScript('window.__who = ' + JSON.stringify(who) + ';\n' + RUNTIME);
   const page = await ctx.newPage();
@@ -276,6 +284,149 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     const after = keysOf('prod', 'data/users/u_alex/').length;
     check(before > 0 && after === 0, 'Alex’s area went from ' + before + ' documents to ' + after);
     check(keysOf('prod', 'data/users/u_jamie/').length > 0, 'Jamie’s data is untouched');
+    check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
+    await ctx.close();
+  }
+
+  console.log('S: a bank statement on an itemized report');
+  {
+    const UBER = { kind: 'receipt', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 26.85, currency: 'USD', cad: null, payment: 'Visa 4412' }] };
+    const SAM = { id: 'u_sam', level: 'interact', signedIn: true, R: [
+      UBER,
+      { kind: 'statement', transactions: [{ date: '2026-04-29', vendor: 'Uber', category: 'taxi', amount: 36.93, currency: 'CAD' }] },
+      UBER,
+    ] };
+    const { ctx, page, errors } = await open(browser, { who: SAM });
+    const rowsText = () => page.$$eval('.charge-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+    await page.waitForSelector('text=New itemized report');
+    await page.click('text=New itemized report');
+    await page.fill('#it-name', 'Sam Lee');
+    await page.fill('#it-cust', 'Fabrikam Burbank');
+    await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
+    await page.waitForFunction(() => document.querySelectorAll('.charge-row').length === 1 && !/Reading receipt|Adding photo/.test(document.body.innerText), null, { timeout: 30000 });
+    await page.setInputFiles('#st-up', path.join(FIX, 'statement.png'));
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && !/Reading statement|Adding page/.test(document.body.innerText) && document.querySelectorAll('.charge-row').length === 2, null, { timeout: 30000 });
+    const lines = await page.$$eval('.stmt-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+    check(lines.length === 2 && /UBER/.test(lines[0]) && /BUDGET/.test(lines[1]), 'the marked lines are on the report; the coffee and the payment aren’t: ' + JSON.stringify(lines));
+    check(await page.isVisible('text=Show all 4 lines'), 'the other lines are a tap away');
+    check(/On the report: Taxi \/ Uber/.test(lines[0]) && /Receipt/.test(lines[0]), 'the Uber line is paired with the Uber receipt by itself');
+    let rows = await rowsText();
+    check(/CA\$36\.93/.test(rows[0]) && /On statement/.test(rows[0]), 'the US-dollar receipt gets the CAD that posted, with no typing: ' + rows[0]);
+    check(rows.some(t => /BUDGET RENT-A-CAR LAX/.test(t) && /980\.25/.test(t) && /No receipt/.test(t)), 'the rental on the statement, with no receipt, is still on the report: ' + JSON.stringify(rows));
+    const sum = await page.innerText('.stmt-sum');
+    check(/2 of 2 charges on the report are on your statement/.test(sum) && /Missing a receipt: May 10 BUDGET RENT-A-CAR LAX/.test(sum), 'and the missing receipt is pointed out: ' + sum);
+    check(/Missing receipts/.test(await page.innerText('.panel:has(h2:text("Totals"))')), 'in the totals too');
+    // the person attaches the rental receipt to that charge
+    await page.setInputFiles('.stmt-row:has-text("BUDGET") input[type=file]', path.join(FIX, 'rental.pdf'));
+    await page.waitForSelector('text=Receipt attached.');
+    await page.waitForFunction(() => !/No receipt|Missing a receipt/.test(document.body.innerText));
+    check(true, 'attaching the receipt clears the warning');
+    await page.click('.charge-row >> text=BUDGET');
+    await page.click('text=Details are correct');
+    // a charge edited off the statement amount is flagged on both sides
+    await page.click('.charge-row >> text=BUDGET');
+    const amtId = await page.$eval('.charge-edit input[type=date]', e => e.id.replace(/-date$/, '-amt'));
+    await page.fill('#' + amtId, '990.25'); await page.dispatchEvent('#' + amtId, 'blur');
+    await page.waitForSelector('.charge-row >> text=Statement shows CA$980.25');
+    await page.click('text=Use CA$980.25 from the statement');
+    await page.waitForFunction(() => !/Statement shows/.test(document.body.innerText));
+    check(true, 'an amount that doesn’t match the statement is flagged, and one tap fixes it');
+    // a charge with no statement line is flagged
+    await page.click('text=Add without receipt');
+    await page.waitForTimeout(300);
+    const manual = (await rowsText()).find(t => /Date needed|Taxi/.test(t) && /Not on statement/.test(t));
+    check(!!manual && /No receipt/.test(manual), 'a charge that isn’t on the statement is flagged: ' + manual);
+    await page.click('.charge-edit >> text=Delete');
+    await page.click('.sheet[role=alertdialog] >> text=Delete charge');
+    await page.waitForTimeout(900);
+    const stored = [...servers.prod.entries()].filter(([k]) => k.startsWith('data/users/u_sam/app/reports/')).map(([, v]) => v);
+    const st = stored[0] && stored[0].statements && stored[0].statements[0];
+    const sc = stored[0] && stored[0].charges;
+    check(st && st.rows.length === 4 && st.rows.filter(x => x.chargeId).length === 2 && sc.length === 2 && sc.find(c => c.vendor === 'Uber').cad === 36.93 && sc.every(c => c.imageId), 'the page, its lines, the pairings and both receipts are saved with the report');
+    await shot(page, 'S-statement');
+    await page.click('.dock >> text=Download');
+    await page.waitForSelector('text=Bank statement PDF');
+    check(await page.isVisible('text=Receipts · 2'), 'the statement isn’t one of the receipts');
+    const grab = async (t) => {
+      const before = await page.evaluate(() => window.__downloads.length);
+      await page.click(t);
+      await page.waitForFunction((x) => window.__downloads.length > x, before);
+      const d = (await page.evaluate(() => window.__downloads)).pop();
+      const buf = Buffer.from(d.b64, 'base64');
+      fs.writeFileSync(path.join(OUT, 'S-' + d.filename), buf);
+      return { name: d.filename, buf };
+    };
+    const pdf = await grab('text=Bank statement PDF');
+    const pageCount = (pdf.buf.toString('latin1').match(/\/Type \/Page[^s]/g) || []).length;
+    check(/Fabrikam Burbank Itemized Expenses .* Bank Statement\.pdf$/.test(pdf.name) && pdf.buf.subarray(0, 5).toString() === '%PDF-' && pageCount === 2, 'the statement downloads as its own PDF: ' + pdf.name + ' (' + pageCount + ' pages)');
+    const zf = await grab('text=Statement files');
+    const names = Object.keys((await JSZip.loadAsync(zf.buf)).files);
+    check(/Bank Statement files\.zip$/.test(zf.name) && names.length === 1 && /^Statement 01 - statement\.jpg$/.test(names[0]), 'and the statement as uploaded: ' + zf.name + ' → ' + names.join(', '));
+    await page.click('[aria-label="Close"]');
+    await page.click('[aria-label="Back to reports"]');
+    // statement first, receipt after: the receipt joins the charge its line made
+    await page.click('text=New itemized report');
+    await page.fill('#it-cust', 'Fabrikam statement first');
+    await page.setInputFiles('#it-up', path.join(FIX, 'statement.png'));
+    await page.waitForSelector('text=That looks like a card statement');
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && document.querySelectorAll('.charge-row').length === 2, null, { timeout: 30000 });
+    check(true, 'a statement added with the receipts moves to Bank statement, and its two charges go on the report');
+    await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
+    await page.waitForFunction(() => !/Reading receipt|Adding photo/.test(document.body.innerText) && document.querySelectorAll('.charge-row img').length === 1, null, { timeout: 30000 });
+    await page.waitForTimeout(200);
+    rows = await rowsText();
+    check(rows.length === 2 && rows.some(t => /Uber/.test(t) && /CA\$36\.93/.test(t) && !/No receipt/.test(t)), 'the Uber receipt joins the Uber charge from the statement, no duplicate: ' + JSON.stringify(rows));
+    // a PDF statement exports exactly as uploaded; the same lines on it aren't added twice
+    await page.setInputFiles('#st-up', path.join(FIX, 'rental.pdf'));
+    await page.waitForFunction(() => document.querySelectorAll('.stmt-page').length === 3 && !/Reading statement|Adding page/.test(document.body.innerText), null, { timeout: 30000 }); // the PDF has two pages
+    check((await rowsText()).length === 2, 'the same lines on other pages don’t add charges');
+    await page.click('.dock >> text=Download');
+    const zf2 = await grab('text=Statement files');
+    const z2 = await JSZip.loadAsync(zf2.buf);
+    const n2 = Object.keys(z2.files);
+    const pdfIn = n2.find(n => /\.pdf$/.test(n));
+    check(n2.length === 2 && pdfIn && (await z2.file(pdfIn).async('nodebuffer')).equals(fs.readFileSync(path.join(FIX, 'rental.pdf'))), 'the PDF statement comes back byte for byte: ' + n2.join(', '));
+    await page.click('[aria-label="Close"]');
+    check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
+    await ctx.close();
+  }
+
+  console.log('P: the shareable preview (nothing saved, no sign-in)');
+  {
+    const { ctx, page, errors } = await open(browser, { env: 'preview' });
+    await page.waitForSelector('text=Preview: nothing you enter is saved');
+    const cards = await page.$$eval('.rcard .cust', els => els.map(e => e.textContent));
+    check(cards.length === 2 && cards.every(t => /\(example\)/.test(t)), 'opens on two marked examples: ' + cards.join(', '));
+    check(await page.isVisible('.envband'), 'the preview band shows');
+    await page.click('text=Contoso LA (example)');
+    await page.click('.dock >> text=Download');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('text=Excel workbook')]);
+    const z = await JSZip.loadAsync(fs.readFileSync(await dl.path()));
+    check(!!z.file('xl/worksheets/sheet1.xml'), 'the example downloads as the Excel form: ' + dl.suggestedFilename());
+    await page.click('[aria-label="Close"]');
+    await page.click('[aria-label="Back to reports"]');
+    await newPerDiem(page, 'Pat Visitor', 'Visitor trial trip');
+    await page.click('[aria-label="Back to reports"]');
+    await page.waitForSelector('text=Visitor trial trip');
+    const dev = await onDevice(page);
+    check(dev.idb.length === 0 && dev.ls === 0 && dev.ss === 0, 'nothing stored on the device ' + JSON.stringify(dev));
+    await page.reload();
+    await page.waitForSelector('.rcard');
+    check(!(await page.innerText('body')).includes('Visitor trial trip'), 'a reload clears what the visitor entered');
+    await shot(page, 'P-preview-home');
+    check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errors } = await open(browser, { env: 'preview', who: ALEX });
+    await page.waitForSelector('text=Preview: nothing you enter is saved');
+    await page.click('text=New itemized report');
+    await page.fill('#it-name', 'Pat Visitor');
+    await page.fill('#it-cust', 'Visitor itemized');
+    await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
+    await page.waitForFunction(() => document.querySelectorAll('.charge-row').length >= 1 && !/Reading receipt|Adding photo/.test(document.body.innerText), null, { timeout: 30000 });
+    check(/Uber/.test(await page.innerText('body')), 'opened in Claude, receipts are read by Claude');
+    check(keysOf('preview').length === 0, 'and nothing is written to any database');
     check(errors.length === 0, 'no page errors ' + JSON.stringify(errors));
     await ctx.close();
   }

@@ -1,0 +1,7 @@
+{
+  "comment": "Libraries loaded on demand. Pinned to package-lock.json; test/integrity.js checks every hash.",
+  "pdfjs": {
+    "lib": ["https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs", "sha384-oPqHr8MeYfJpkh4zgHbWYiuwabTzthRiOS5tSWsWGmCVWlwqIkS9coGro5aa48OF"],
+    "worker": ["https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs", "sha384-tINN5IYq7dFaoHBUBBc2yfxGwR38mZn9GhaX31UofKYNgAg/3y8A7IjUI3GuEg/8"]
+  }
+}
