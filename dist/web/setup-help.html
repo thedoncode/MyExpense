@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Finish setting up MyExpense</title>
+<link rel="icon" href="/assets/icon-d75f28ffa723.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/fonts-9a3492b639ea.css" integrity="sha384-x5KxNCAu83ynnE6ekC90splZbQ7U4mN2dkvx0ghHc3OHzFGmqbHEn6dzB/AzqZLA">
+<link rel="stylesheet" href="/assets/app-c1cace277f3f.css" integrity="sha384-qfCNQCTPPg6dKDvwm3K5A1b2rXTOkAJYrLSjSiOF445zRdBoLOark7NMAf3SOQou">
+</head>
+<body>
+<header class="bar"><div class="bar-in"><div class="wordmark"><span class="stub" aria-hidden="true"></span>MyExpense</div></div></header>
+<div class="wrap"><div class="gate">
+  <h1>Finish setting up MyExpense</h1>
+  <p class="muted">MyExpense is installed, but it won’t open until its settings are complete. Nothing is stored and nobody can sign in yet.</p>
+  <div class="notice bad" role="alert"><b>What’s missing:</b> __PROBLEM__</div>
+  <p class="small">Add these in the hosting dashboard under <b>Environment variables</b>, save (that redeploys the app), then reload this page. The full list and steps are in <span class="mono">docs/HOSTINGER.md</span>.</p>
+  <div id="keys" class="gate-form" hidden data-show="__SHOW_KEYS__">
+    <span class="caps muted">Fresh secrets, made in your browser just now</span>
+    <p class="small muted">These two values were created by your browser and never left it. Copy them straight into the environment variables. Keep DATA_KEY somewhere safe too, like a password manager: without it, stored expenses can’t be read. Only use a new DATA_KEY for a new install: if MyExpense already holds expenses, keep the DATA_KEY it has.</p>
+    <div class="linkbox"><span class="small"><b>DATA_KEY</b> (encrypts everyone’s reports and receipts)</span><code id="k1"></code><div class="row-btns"><button class="btn sm" type="button" data-copy="k1">Copy</button></div></div>
+    <div class="linkbox"><span class="small"><b>SETUP_TOKEN</b> (lets you create the first administrator)</span><code id="k2"></code><div class="row-btns"><button class="btn sm" type="button" data-copy="k2">Copy</button></div></div>
+  </div>
+</div></div>
+<script src="/assets/setup-help-92f98fd05ae9.js" integrity="sha384-MFmXvqRY4l9IA9vjxwWzoXDKEtsiCvaJ7L0ygiqPitIwiqNgPYZ1eR0/Q/mSmAwh"></script>
+</body>
+</html>

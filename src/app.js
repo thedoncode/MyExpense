@@ -1,299 +1,17 @@
-<title>__APP_TITLE__</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style>
-/* Layout: a pocket ledger. One column of form-like rows; every trip is broken into
-   Sunday–Saturday "Week ending" stubs, the same way the paper forms are. */
-:root {
-  --bg: #EDF0F3;
-  --surface: #FFFFFF;
-  --surface-2: #F5F7F9;
-  --ink: #17202B;
-  --muted: #536071;
-  --faint: #7F8B99;
-  --line: #D4DAE2;
-  --line-2: #E5E9EE;
-  --pd: #36557F;        /* per diem: the slate of the travel form's category header */
-  --pd-bg: #E3EAF3;
-  --it: #B42D25;        /* itemized: the red day band of the claim form */
-  --it-bg: #F7E5E2;
-  --btn: #17202B;
-  --btn-ink: #FFFFFF;
-  --ok: #1D7247;  --ok-bg: #DFF1E7;
-  --warn: #85560A; --warn-bg: #FCEFCF;
-  --bad: #AE2419; --bad-bg: #FBE4E1;
-  --focus: #2F6FD0;
-  --scrim: rgba(15, 20, 26, .45);
-  --shadow: 0 1px 2px rgba(23, 32, 43, .06), 0 6px 20px rgba(23, 32, 43, .07);
-  --f-display: 'Archivo', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-  --f-body: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --r: 10px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0E1319; --surface: #161D25; --surface-2: #1B242E; --ink: #E5EAF0; --muted: #A2AEBC; --faint: #738090;
-    --line: #2C3743; --line-2: #222C36; --pd: #93AED6; --pd-bg: #1D293A; --it: #F08A80; --it-bg: #3A1F1C;
-    --btn: #E5EAF0; --btn-ink: #0E1319; --ok: #62C995; --ok-bg: #15301F; --warn: #E9B751; --warn-bg: #33290F;
-    --bad: #F38B81; --bad-bg: #3B1C19; --focus: #7AA7EE; --scrim: rgba(0, 0, 0, .6);
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3); color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0E1319; --surface: #161D25; --surface-2: #1B242E; --ink: #E5EAF0; --muted: #A2AEBC; --faint: #738090;
-  --line: #2C3743; --line-2: #222C36; --pd: #93AED6; --pd-bg: #1D293A; --it: #F08A80; --it-bg: #3A1F1C;
-  --btn: #E5EAF0; --btn-ink: #0E1319; --ok: #62C995; --ok-bg: #15301F; --warn: #E9B751; --warn-bg: #33290F;
-  --bad: #F38B81; --bad-bg: #3B1C19; --focus: #7AA7EE; --scrim: rgba(0, 0, 0, .6);
-  --shadow: 0 1px 2px rgba(0, 0, 0, .3); color-scheme: dark;
-}
-
-* { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); -webkit-text-size-adjust: 100%; }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
-button, input, select { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
-.caps { text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; }
-h1, h2, h3 { font-family: var(--f-display); font-stretch: 85%; margin: 0; text-wrap: balance; letter-spacing: -.005em; }
-h1 { font-size: 26px; font-weight: 750; line-height: 1.15; }
-h2 { font-size: 19px; font-weight: 700; }
-h3 { font-size: 16px; font-weight: 700; }
-p { margin: 0; }
-.muted { color: var(--muted); }
-.faint { color: var(--faint); }
-.small { font-size: 13px; }
-
-/* top bar */
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
-.bar-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; min-height: 56px;
-  padding-block: 6px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.wordmark { font-family: var(--f-display); font-stretch: 78%; font-weight: 800; font-size: 22px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
-.wordmark .stub { width: 20px; height: 24px; border: 2px solid var(--ink); border-radius: 3px; position: relative; }
-.wordmark .stub::before, .wordmark .stub::after { content: ""; position: absolute; left: 3px; right: 3px; height: 2px; background: var(--ink); }
-.wordmark .stub::before { top: 5px; } .wordmark .stub::after { top: 11px; right: 7px; }
-.bar-title { flex: 1; min-width: 0; }
-/* non-production builds: a hazard band no one mistakes for the real app (same colours in both themes) */
-.envband { background: repeating-linear-gradient(-45deg, #F3B93F 0 12px, #E9A92C 12px 24px); color: #261B00; font-weight: 700; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; text-align: center; padding: 4px max(16px, env(safe-area-inset-right, 0px)) 4px max(16px, env(safe-area-inset-left, 0px)); }
-.envtag { font-family: var(--f-mono); font-size: 12px; font-weight: 600; letter-spacing: .06em; padding: 2px 6px; border-radius: 4px; background: #F3B93F; color: #261B00; align-self: center; }
-.bar-title h1 { font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-title .sub { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
-.spacer { flex: 1; }
-
-.wrap { max-width: 760px; margin: 0 auto; padding-block: 18px 120px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
-
-/* buttons */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 9px;
-  border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 700; font-size: 15px; text-decoration: none; white-space: nowrap; }
-.btn:hover { border-color: var(--faint); }
-.btn.primary { background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
-.btn.primary:hover { filter: brightness(1.12); }
-.btn.ghost { background: transparent; border-color: transparent; }
-.btn.ghost:hover { background: var(--surface-2); }
-.btn.danger { color: var(--bad); }
-.btn.sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
-.btn[disabled] { opacity: .45; cursor: not-allowed; }
-.icon-btn { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 9px; border: 0; background: transparent; cursor: pointer; flex: none; }
-.icon-btn:hover { background: var(--surface-2); }
-svg.i { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-/* panels */
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
-.panel-h { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px 0; flex-wrap: wrap; }
-.panel-b { padding: 14px 16px 16px; display: grid; gap: 14px; }
-
-/* fields */
-.fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-.field { display: grid; gap: 5px; min-width: 0; }
-.field > label, .lbl { font-size: 13px; font-weight: 700; color: var(--muted); }
-.field .hint { font-size: 12.5px; color: var(--faint); }
-.inp { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 8px 11px; font-size: 16px; }
-.inp:focus { border-color: var(--focus); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent); }
-.inp.bad { border-color: var(--bad); }
-select.inp { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 17px) 19px, calc(100% - 12px) 19px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
-.inp.money { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
-.money-row { display: grid; grid-template-columns: 1fr 104px; gap: 8px; }
-
-/* fixed terms (per diem) */
-.terms { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--line); font-size: 13.5px; }
-.terms b { font-family: var(--f-mono); font-weight: 600; }
-
-/* segmented */
-.seg { display: inline-grid; grid-auto-flow: column; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface); }
-.seg button { min-height: 42px; padding: 0 14px; border: 0; background: transparent; cursor: pointer; font-weight: 700; color: var(--muted); }
-.seg button + button { border-left: 1px solid var(--line); }
-.seg button[aria-pressed="true"] { background: var(--btn); color: var(--btn-ink); }
-
-/* week stubs */
-.week { border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface); }
-.week-tab { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
-.week-tab .caps { color: var(--muted); }
-.week-tab .we { font-family: var(--f-mono); font-weight: 600; font-size: 14px; }
-.week-tab .sum { margin-left: auto; font-family: var(--f-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
-
-/* per diem calendar */
-.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 8px; }
-.cal .dh { text-align: center; font-size: 11px; font-weight: 700; color: var(--faint); letter-spacing: .06em; }
-.day { position: relative; min-height: 58px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); display: grid; align-content: space-between; padding: 5px 6px; text-align: left; cursor: pointer; overflow: hidden; }
-.day:hover { border-color: var(--pd); }
-.day .dn { font-weight: 700; font-size: 15px; line-height: 1; position: relative; z-index: 1; }
-.day .dm { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; position: relative; z-index: 1; }
-.day .amt { font-family: var(--f-mono); font-size: 11.5px; font-weight: 600; position: relative; z-index: 1; }
-.day.full { background: var(--pd-bg); border-color: color-mix(in srgb, var(--pd) 35%, var(--line)); }
-.day.partial { background: linear-gradient(to top, var(--pd-bg) 50%, var(--surface) 50%); border-color: var(--pd); border-style: dashed; }
-.day.partial .amt { color: var(--pd); }
-.day.off { visibility: hidden; }
-.day[disabled] { cursor: default; }
-.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--pd); display: inline-block; }
-.sw.full { background: var(--pd-bg); }
-.sw.partial { background: linear-gradient(to top, var(--pd-bg) 50%, var(--surface) 50%); border-style: dashed; }
-
-/* math line */
-.math { display: grid; gap: 4px; font-family: var(--f-mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.math .row { display: flex; justify-content: space-between; gap: 12px; }
-.math .tot { border-top: 1px solid var(--ink); padding-top: 6px; font-weight: 600; font-size: 15px; }
-
-/* type tags & chips */
-.tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 5px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.tag.pd { color: var(--pd); background: var(--pd-bg); }
-.tag.it { color: var(--it); background: var(--it-bg); }
-.chip { display: inline-flex; align-items: center; gap: 5px; min-height: 22px; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 700; }
-.chip.ok { color: var(--ok); background: var(--ok-bg); }
-.chip.warn { color: var(--warn); background: var(--warn-bg); }
-.chip.bad { color: var(--bad); background: var(--bad-bg); }
-.chip.info { color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
-.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; display: inline-block; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* home */
-.start { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.start-card { text-align: left; padding: 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); cursor: pointer; display: grid; gap: 8px; align-content: start; }
-.start-card:hover { border-color: var(--faint); box-shadow: var(--shadow); }
-.start-card .big { font-family: var(--f-display); font-stretch: 80%; font-weight: 800; font-size: 24px; line-height: 1.1; }
-.start-card .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.list { display: grid; gap: 10px; }
-.rcard { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); cursor: pointer; text-align: left; width: 100%; }
-.rcard:hover { border-color: var(--faint); }
-.rcard .cust { font-family: var(--f-display); font-stretch: 85%; font-weight: 750; font-size: 19px; line-height: 1.2; min-width: 0; overflow-wrap: anywhere; }
-.rcard .total { font-family: var(--f-mono); font-weight: 600; font-size: 17px; text-align: right; }
-.rcard .meta { color: var(--muted); font-size: 13.5px; }
-.rcard .status { justify-self: end; align-self: end; }
-.section-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.empty { padding: 26px 18px; text-align: center; border: 1px dashed var(--line); border-radius: var(--r); color: var(--muted); display: grid; gap: 6px; justify-items: center; }
-.banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); font-size: 14px; }
-.banner p { flex: 1; min-width: 200px; color: var(--ink); }
-.store-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
-.gate { display: grid; gap: 12px; justify-items: start; max-width: 520px; padding: 28px 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
-.gate-icon { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); }
-
-/* itemized capture */
-.capture { display: grid; gap: 10px; padding: 14px; border: 1.5px dashed var(--line); border-radius: var(--r); background: var(--surface-2); }
-.capture.drag { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 8%, var(--surface-2)); }
-.capture-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.capture-btns .btn { flex: 1 1 140px; }
-.capture .note { font-size: 13px; color: var(--muted); }
-.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-/* charges */
-.charges { display: grid; }
-.charge { border-top: 1px solid var(--line-2); }
-.charge:first-child { border-top: 0; }
-.charge-row { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; cursor: pointer; width: 100%; text-align: left; background: transparent; border: 0; }
-.charge-row:hover { background: var(--surface-2); }
-.thumb { width: 48px; height: 48px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2) center/cover no-repeat; display: grid; place-items: center; color: var(--faint); overflow: hidden; }
-.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.charge .l1 { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
-.charge .l2 { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
-.charge .amt { font-family: var(--f-mono); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-.charge .amt small { display: block; font-size: 11.5px; color: var(--faint); font-weight: 400; }
-.charge-edit { padding: 4px 12px 14px; display: grid; gap: 12px; }
-.charge-edit .photo { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; }
-.charge-edit .photo .big { width: 96px; height: 120px; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; background: var(--surface-2); cursor: zoom-in; padding: 0; }
-.charge-edit .photo .big img { width: 100%; height: 100%; object-fit: cover; }
-.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
-.check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--ink); }
-.edit-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
-.left-off { display: grid; gap: 6px; font-size: 14px; }
-.left-off li { color: var(--ink); }
-ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-
-/* bottom action bar */
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
-.dock-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.dock .t { flex: 1; min-width: 0; }
-.dock .t b { font-family: var(--f-mono); font-size: 20px; font-weight: 600; display: block; line-height: 1.15; }
-.dock .t span { font-size: 12.5px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* sheets */
-.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 20; display: grid; align-items: end; justify-items: center; }
-@media (min-width: 700px) { .scrim { align-items: center; } }
-.sheet { width: min(560px, 100%); max-height: 92vh; overflow: auto; background: var(--surface); border-radius: 16px 16px 0 0; padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display: grid; gap: 14px; box-shadow: var(--shadow); }
-@media (min-width: 700px) { .sheet { border-radius: 16px; } }
-.sheet-h { display: flex; align-items: center; gap: 10px; }
-.sheet-h h2 { flex: 1; }
-.out-btn { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; width: 100%; }
-.out-btn:hover:not([disabled]) { border-color: var(--faint); }
-.out-btn[disabled] { opacity: .5; cursor: not-allowed; }
-.out-btn .ext { width: 40px; height: 48px; border-radius: 5px; display: grid; place-items: end center; padding-bottom: 6px; font-family: var(--f-mono); font-size: 10.5px; font-weight: 600; color: #fff; }
-.ext.xlsx { background: #1F6E43; } .ext.pdf { background: #B42D25; } .ext.zip { background: #55606E; }
-.out-group { display: grid; gap: 8px; }
-.byday { font-size: 13.5px; }
-.byday summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
-.byday-week { display: grid; gap: 3px; padding: 6px 0 4px; }
-.byday .row { display: flex; justify-content: space-between; gap: 10px; }
-.byday .row span:first-child { min-width: 0; overflow-wrap: anywhere; }
-.out-btn b { display: block; }
-.out-btn span { font-size: 13px; color: var(--muted); }
-.issues { display: grid; gap: 8px; }
-.issue { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; padding: 9px 11px; border-radius: 8px; }
-.issue.bad { background: var(--bad-bg); }
-.issue.warn { background: var(--warn-bg); }
-.issue svg { margin-top: 1px; }
-.issue.bad svg { color: var(--bad); } .issue.warn svg { color: var(--warn); }
-.viewer img { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); }
-.toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); }
-.toast { background: var(--btn); color: var(--btn-ink); padding: 11px 14px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); }
-.skel { height: 74px; border-radius: var(--r); background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%); background-size: 200% 100%; animation: sh 1.4s ease-in-out infinite; border: 1px solid var(--line); }
-@keyframes sh { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-@media (prefers-reduced-motion: reduce) { .spin, .skel { animation: none; } }
-@media (max-width: 420px) {
-  h1 { font-size: 23px; }
-  .day { min-height: 54px; padding: 4px; }
-  .day .amt { font-size: 10.5px; }
-  .charge-row { grid-template-columns: 44px 1fr auto; gap: 10px; }
-  .thumb { width: 44px; height: 44px; }
-}
-</style>
-
-<div id="app"></div>
-
-<!-- Libraries are pinned and integrity-checked: the browser refuses any copy that differs by a byte. -->
-<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js" integrity="sha384-w94Y7k7ToXbmIx5Vi/LxHtprASwddoLhbR/0ZhekgNn8pP9VNRRHzmp2tqrALfKY" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.2/dist/jszip.min.js" integrity="sha384-DdGlNq+wVXAn83gXqwyeFHB7iyXy6L0rLrNzgDmhKWPjiJLg9vj6qosYmZmkMfQ+" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js" integrity="sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3" crossorigin="anonymous"></script>
-<script>
-/*__CORE__*/
-</script>
-<script>
 (function () {
 'use strict';
 const C = window.ExpenseCore;
 const LAYOUTS = /*__LAYOUTS__*/null;
 const TPL = { itemized: '/*__TPL_IT__*/', perdiem: '/*__TPL_PD__*/' };
 // pdf.js, loaded only when someone adds a PDF receipt. Pinned and integrity-checked (the legacy build,
-// for older phones). pdf.js 6 has no eval code path (CVE-2024-4367 is fixed upstream); XFA stays off.
-const PDFJS = {
-  lib: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs', 'sha384-oPqHr8MeYfJpkh4zgHbWYiuwabTzthRiOS5tSWsWGmCVWlwqIkS9coGro5aa48OF'],
-  worker: ['https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs', 'sha384-tINN5IYq7dFaoHBUBBc2yfxGwR38mZn9GhaX31UofKYNgAg/3y8A7IjUI3GuEg/8'],
-};
+// for older phones); the build fills in where it's served from. pdf.js 6 has no eval code path
+// (CVE-2024-4367 is fixed upstream); XFA stays off.
+const PDFJS = /*__PDFJS__*/null;
 const MAX_UPLOAD = 25 * 1024 * 1024; // per file
-// Set per environment by build.js (environments.json)
-const ENV = /*__ENV__*/{ name: 'prod', title: 'MyExpense', banner: '' };
+// Claude or web: storage, sign-in, receipt reading and downloads (src/platform-*.js)
+const PLAT = window.MyExpensePlatform;
+// Set per environment: by build.js for Claude (environments.json), by the server for the web version
+const ENV = PLAT.env || /*__ENV__*/{ name: 'prod', title: 'MyExpense', banner: '' };
 
 if (!window.htmPreact) {
   document.getElementById('app').innerHTML = '<div class="wrap"><div class="panel panel-b"><h2>MyExpense couldn’t load</h2><p class="muted">A required script didn’t load. Check your connection and reload the page.</p></div></div>';
@@ -331,122 +49,43 @@ const P = {
   check: 'M5 12l5 5 9-10', alert: 'M12 8v5M12 16.5v.5M10.3 4.2L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z',
   cloud: 'M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.5 1.5A3.5 3.5 0 0 1 17.5 18z', phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
   receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3', cal: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5', x: 'M6 6l12 12M18 6L6 18',
-  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', download: 'M12 4v12M7 11l5 5 5-5M5 20h14', sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', download: 'M12 4v12M7 11l5 5 5-5M5 20h14', sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
 };
 const Icon = ({ n, size }) => html`<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style=${size ? 'width:' + size + 'px;height:' + size + 'px' : ''}><path d=${P[n]} /></svg>`;
 
-/* ---------- services: sign-in, private storage, Claude, downloads ---------- */
-// Every report and receipt lives in the signed-in person's private area of this app's database,
-// data/users/<their id>/. The platform enforces that privacy on the server: nobody else can read or
-// write it, including the app's owner. Nothing is kept on the device.
+/* ---------- services: the platform provides sign-in, private storage, receipt reading, downloads ---------- */
+// Each person's reports and receipts live only in their own private storage, enforced on the
+// server (Claude's database rules, or the MyExpense server). Nothing is kept on the device.
 const bus = new Set();
 const emit = () => bus.forEach(f => f());
 const Svc = {
-  ready: false, store: null, sample: null, aiImages: null, downloads: null,
-  inViewer: !!(window.claude && typeof window.claude.use === 'function'),
-  access: 'checking', // checking | ok | outside | signed-out | no-access | error
+  ready: false, store: null, user: null,
+  access: 'checking', // checking | ok | signin | no-access | error, plus platform-specific screens
 };
-
-class PrivateStore {
-  constructor(db, id) {
-    const root = db.doc('data/users/' + id + '/app');
-    this.reports = root.collection('reports'); this.images = root.collection('images'); this.chunks = root.collection('chunks');
-    this.settingsDoc = db.doc('data/users/' + id + '/settings');
-    this.q = new Map();
-  }
-  serial(key, fn) { const next = (this.q.get(key) || Promise.resolve()).catch(() => {}).then(fn); this.q.set(key, next); return next; }
-  async listReports() { const s = await this.reports.get(); return s.docs.filter(d => d.exists).map(d => d.data()); }
-  saveReport(r) { const body = JSON.parse(JSON.stringify(r)); return this.serial('r' + r.id, () => this.reports.doc(r.id).set(body)); }
-  deleteReport(id) { return this.serial('r' + id, () => this.reports.doc(id).delete()); }
-  async putChunks(prefix, blob) {
-    const b64 = bytesToB64(new Uint8Array(await blob.arrayBuffer()));
-    const N = 180000, n = Math.ceil(b64.length / N);
-    for (let k = 0; k < n; k++) await this.chunks.doc(prefix + '.' + k).set({ d: b64.slice(k * N, (k + 1) * N) });
-    return n;
-  }
-  async getChunks(prefix, n, type) {
-    const parts = await Promise.all(Array.from({ length: n }, (_, k) => this.chunks.doc(prefix + '.' + k).get()));
-    if (parts.some(p => !p.exists)) return null;
-    return new Blob([b64ToBytes(parts.map(p => p.data().d).join(''))], { type });
-  }
-  async putImage(id, blob, meta, orig) {
-    const n = await this.putChunks(id, blob);
-    const on = orig ? await this.putChunks(id + '.o', orig.blob) : 0;
-    await this.images.doc(id).set({ n, w: meta.w, h: meta.h, type: 'image/jpeg', size: blob.size, on, otype: orig ? orig.type : null, oname: orig ? orig.name : null });
-  }
-  async getOriginal(id) {
-    const m = await this.images.doc(id).get();
-    if (!m.exists || !m.data().on) return null;
-    const meta = m.data();
-    const blob = await this.getChunks(id + '.o', meta.on, meta.otype || 'application/octet-stream');
-    return blob ? { blob, type: meta.otype, name: meta.oname } : null;
-  }
-  async getImage(id) {
-    const m = await this.images.doc(id).get();
-    if (!m.exists) return null;
-    const meta = m.data();
-    const blob = await this.getChunks(id, meta.n, meta.type || 'image/jpeg');
-    return blob ? { blob, w: meta.w, h: meta.h } : null;
-  }
-  async deleteImage(id) {
-    const m = await this.images.doc(id).get();
-    const n = m.exists ? m.data().n : 0, on = m.exists ? (m.data().on || 0) : 0;
-    for (let k = 0; k < n; k++) await this.chunks.doc(id + '.' + k).delete();
-    for (let k = 0; k < on; k++) await this.chunks.doc(id + '.o.' + k).delete();
-    await this.images.doc(id).delete();
-  }
-  async getSettings() { const s = await this.settingsDoc.get(); return s.exists ? s.data() : {}; }
-  saveSettings(s) { const body = JSON.parse(JSON.stringify(s)); return this.serial('settings', () => this.settingsDoc.set(body)); }
-  // Erase everything this person has stored
-  async deleteAll() {
-    for (const r of await this.listReports()) await this.reports.doc(r.id).delete();
-    let snap;
-    do { snap = await this.images.limit(50).get(); for (const d of snap.docs) await this.deleteImage(d.id); } while (snap.size === 50);
-    do { snap = await this.chunks.limit(10).get(); for (const d of snap.docs) await this.chunks.doc(d.id).delete(); } while (snap.size === 10);
-    await this.settingsDoc.delete();
-  }
-}
-
 async function initServices() {
-  if (!Svc.inViewer) { Svc.access = 'outside'; Svc.ready = true; emit(); return; }
-  const use = (n) => window.claude.use(n).catch(() => null);
-  const [db, user, sample, downloads] = await Promise.all([use('db'), use('user'), use('sample'), use('downloads')]);
-  Svc.downloads = downloads;
-  if (sample) {
-    Svc.sample = sample;
-    try { const lim = await sample.limits(); Svc.aiImages = lim && lim.images ? lim.images : null; } catch (e) { Svc.aiImages = null; }
-  }
-  if (!db || !user) Svc.access = 'signed-out';
-  else {
-    try {
-      const id = await user.id();
-      if (!id) Svc.access = 'signed-out';
-      else { Svc.store = new PrivateStore(db, id); await Svc.store.getSettings(); Svc.access = 'ok'; }
-    } catch (e) { Svc.store = null; Svc.access = 'error'; }
-  }
+  try { await PLAT.init(Svc, ENV, emit); } catch (e) { Svc.store = null; Svc.access = 'error'; }
   Svc.ready = true; emit();
 }
-const aiOn = () => !!(Svc.sample && Svc.aiImages);
+const aiOn = () => PLAT.aiAvailable(Svc);
 
-// Someone who can open the page but isn't allowed to save (or whose access was removed) is stopped
-// at the first refused write: whatever was in memory is dropped and the access screen shows.
-const ACCESS_ERRORS = ['invalid_argument', 'revoked', 'not_granted', 'capability_disabled', 'capability_removed'];
-function lostAccess() {
+// A refused write or read (no access, access removed, or the session ended) drops everything held
+// in memory and shows the access or sign-in screen.
+function lostAccess(state) {
   for (const t of timers.values()) clearTimeout(t);
   timers.clear();
   for (const u of urlCache.values()) URL.revokeObjectURL(u);
   urlCache.clear();
   Model.reports = []; Model.settings = {}; Model.loaded = false;
-  Svc.store = null; Svc.access = 'no-access'; emit();
+  Svc.store = null; Svc.user = null; Svc.access = state || 'no-access'; emit();
 }
 // Returns true when the caller may retry later
 function writeFailed(e, what) {
-  const code = e && e.code;
-  if (ACCESS_ERRORS.includes(code)) {
-    if (code === 'invalid_argument' && what && JSON.stringify(what).length > 240000) { toast('This report is too large to save. Split it into two reports.'); return false; }
-    lostAccess(); return false;
-  }
-  if (code === 'quota_exceeded') { toast('MyExpense’s storage is full. Delete reports you’ve already submitted, then try again.'); return false; }
+  const kind = PLAT.classify(e, what);
+  if (kind === 'toolarge') { toast('This report is too large to save. Split it into two reports.'); return false; }
+  if (kind === 'access') { lostAccess('no-access'); return false; }
+  if (kind === 'signin') { lostAccess('signin'); return false; }
+  if (kind === 'quota') { toast('MyExpense’s storage is full. Delete reports you’ve already submitted, then try again.'); return false; }
+  if (kind === 'bad') { toast('That change couldn’t be saved. Reload the page and try again.'); return false; }
   return true;
 }
 
@@ -457,7 +96,8 @@ const Model = {
   set(list) { this.reports = list; emit(); },
   update(id, fn) {
     const cur = this.get(id); if (!cur) return;
-    const next = fn(cur); if (!next || next === cur) return;
+    let next = fn(cur); if (!next || next === cur) return;
+    next = C.reconcile(next, () => uid('c')); // the report and its statement stay in step
     next.updatedAt = Date.now();
     this.reports = this.reports.map(r => (r.id === id ? next : r));
     schedule(next.id); emit();
@@ -467,7 +107,7 @@ const Model = {
     const r = this.get(id); if (!r) return;
     clearTimeout(timers.get(id)); timers.delete(id);
     this.reports = this.reports.filter(x => x.id !== id); emit();
-    const imgs = new Set((r.charges || []).map(c => c.imageId).filter(Boolean));
+    const imgs = new Set([...(r.charges || []), ...(r.statements || [])].map(c => c.imageId).filter(Boolean));
     try { await Svc.store.deleteReport(id); for (const i of imgs) await Svc.store.deleteImage(i).catch(() => {}); }
     catch (e) { if (writeFailed(e)) toast('Couldn’t delete that report. Try again.'); }
   },
@@ -499,7 +139,8 @@ async function loadAll() {
     Model.reports = list.map(C.cleanReport).filter(Boolean).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // validate everything read back
     Model.loaded = true; emit();
   } catch (e) {
-    if (ACCESS_ERRORS.includes(e && e.code)) lostAccess(); else { Svc.access = 'error'; emit(); }
+    const kind = PLAT.classify(e);
+    if (kind === 'access' || kind === 'signin') lostAccess(kind === 'signin' ? 'signin' : 'no-access'); else { Svc.access = 'error'; emit(); }
   }
 }
 function useTick() { const [, set] = useState(0); useEffect(() => { const f = () => set(x => x + 1); bus.add(f); return () => bus.delete(f); }, []); }
@@ -581,22 +222,23 @@ const aiQueue = []; let aiBusy = false;
 function queueAI(job) { aiQueue.push(job); pumpAI(); }
 async function pumpAI() {
   if (aiBusy) return; const job = aiQueue.shift(); if (!job) return;
-  aiBusy = true; try { await runAI(job); } finally { aiBusy = false; pumpAI(); }
+  aiBusy = true; try { await (job.pageId ? runStatementAI(job) : runAI(job)); } finally { aiBusy = false; pumpAI(); }
 }
 function patchCharge(r, cid, patch) { return { ...r, charges: r.charges.map(c => (c.id === cid ? { ...c, ...patch } : c)) }; }
 function aiErrorText(e) {
   const code = e && e.code;
-  if (code === 'not_granted') return 'Receipt reading is turned off for this page. Fill in the details from the photo.';
+  if (code === 'not_granted' || code === 'ai_off') return 'Receipt reading is turned off. Fill in the details from the photo.';
+  if (code === 'ai_limit') return 'You’ve reached today’s limit for receipt reading. Fill in the details from the photo.';
   if (code === 'rate_limited' || code === 'usage_limited') return 'Claude is busy right now. Fill in the details from the photo.';
   if (code === 'image_rejected') return 'Claude couldn’t open this photo. Fill in the details from it.';
   return 'Couldn’t read this receipt. Fill in the details from the photo.';
 }
-async function runAI({ reportId, chargeId, blobs }) {
+async function runAI({ reportId, chargeId, blobs, imageId }) {
   if (!aiOn()) { Model.update(reportId, r => patchCharge(r, chargeId, { ai: null, currency: 'CAD' })); return; }
   try {
-    const max = (Svc.aiImages && Svc.aiImages.maxCount) || 1;
-    const raw = await Svc.sample.json(C.AI_PROMPT(todayISO()), { images: blobs.slice(0, max), modelTier: 'default' });
+    const raw = await PLAT.readReceipt(Svc, { blobs, imageId, today: todayISO(), prompt: C.AI_PROMPT(todayISO()) });
     const res = C.normalizeAi(raw);
+    if (res.kind === 'statement') { moveToStatements(reportId, chargeId, imageId, blobs); return; }
     if (!res.transactions.length) {
       Model.update(reportId, r => patchCharge(r, chargeId, { ai: 'failed', currency: 'CAD', aiNote: res.kind === 'unreadable' ? 'Claude couldn’t make out this photo. Fill in the details, or retake it.' : 'No claimable charges found on this photo. Fill in the details if it belongs on the report.' }));
       return;
@@ -612,10 +254,163 @@ async function runAI({ reportId, chargeId, blobs }) {
       return { ...r, charges };
     });
   } catch (e) {
-    if (e && e.code === 'not_granted') { Svc.sample = null; emit(); }
+    if (PLAT.aiFailed(Svc, e)) emit();
+    if (PLAT.classify(e) === 'signin') { lostAccess('signin'); return; }
     Model.update(reportId, r => patchCharge(r, chargeId, { ai: 'failed', currency: 'CAD', aiNote: aiErrorText(e) }));
   }
 }
+/* ---------- bank statements ---------- */
+function patchPage(r, pid, fn) { return { ...r, statements: (r.statements || []).map(p => (p.id === pid ? fn(p) : p)) }; }
+function patchRow(r, pid, rid, patch) { return patchPage(r, pid, p => ({ ...p, rows: p.rows.map(x => (x.id === rid ? { ...x, ...patch } : x)) })); }
+// A card statement added with the receipts moves to its own section (its ticked charges go on the
+// report from there, like any statement's).
+function moveToStatements(reportId, chargeId, imageId, blobs) {
+  const pageId = uid('p');
+  Model.update(reportId, r => {
+    const c = r.charges.find(x => x.id === chargeId); if (!c) return r;
+    return { ...r, charges: r.charges.filter(x => x.id !== chargeId),
+      statements: [...(r.statements || []), { id: pageId, imageId, name: 'Card statement', w: 0, h: 0, card: '', ai: 'reading', aiNote: '', rows: [] }] };
+  });
+  toast('That looks like a card statement, so it’s under Bank statement now.');
+  Svc.store.getImage(imageId).then(img => { if (img) Model.update(reportId, r => patchPage(r, pageId, p => ({ ...p, w: img.w, h: img.h }))); }).catch(() => {});
+  queueAI({ reportId, pageId, blobs, imageId });
+}
+async function runStatementAI({ reportId, pageId, blobs, imageId }) {
+  const set = (fn) => Model.update(reportId, r => patchPage(r, pageId, fn));
+  if (!aiOn()) { set(p => ({ ...p, ai: null })); return; }
+  try {
+    const raw = await PLAT.readReceipt(Svc, { blobs, imageId, kind: 'statement', today: todayISO(), prompt: C.STATEMENT_PROMPT(todayISO()) });
+    const res = C.normalizeStatement(raw);
+    const rows = res.rows.map(x => ({ ...x, id: uid('s'), chargeId: null, source: 'ai' }));
+    const note = res.kind === 'not_statement' ? 'This doesn’t look like a card statement. Tick and add the charges yourself, or remove the page.'
+      : !rows.length ? 'Claude couldn’t find any charges on this page. Add them yourself, or retake the photo.' : '';
+    set(p => ({ ...p, ai: rows.length ? 'read' : 'failed', aiNote: note, card: res.card || p.card, rows }));
+  } catch (e) {
+    if (PLAT.aiFailed(Svc, e)) emit();
+    if (PLAT.classify(e) === 'signin') { lostAccess('signin'); return; }
+    set(p => ({ ...p, ai: 'failed', aiNote: aiErrorText(e).replace('this receipt', 'this statement page').replace('Fill in the details from the photo.', 'Tick and add the charges yourself.') }));
+  }
+}
+// Statement pages are kept sharper than receipts, so small print stays readable
+async function processStatementFile(file) {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  const name = String(file.name || 'Statement').replace(/\.[a-z0-9]{2,5}$/i, '').slice(0, 60);
+  if (!isPdf) {
+    let src;
+    try { src = await decodeImage(file); } catch (e) { throw new Error('That picture can’t be opened here. Try a JPEG or PNG screenshot.'); }
+    if (src.width * src.height > 80e6) throw new Error('That image is too large to open (over 80 megapixels).');
+    const out = await scaleToJpeg(src, 2400, 0.82);
+    return { pages: [{ blob: out.blob, w: out.w, h: out.h, name }], orig: null };
+  }
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), enableXfa: false, isEvalSupported: false }).promise;
+  const n = Math.min(pdf.numPages, 12);
+  if (pdf.numPages > 12) toast('Only the first 12 pages of ' + (file.name || 'that PDF') + ' were added.');
+  const pages = [];
+  for (let k = 1; k <= n; k++) {
+    const page = await pdf.getPage(k);
+    const vp0 = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: 1700 / vp0.width });
+    const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    pages.push({ blob: await canvasBlob(cv, 0.82), w: cv.width, h: cv.height, name: name + (n > 1 ? ' p' + k : '') });
+  }
+  // The PDF itself is kept too (up to 6 MB), so the statement exports exactly as it was uploaded
+  const orig = file.size <= 6 * 1024 * 1024 ? { blob: file.slice(0, file.size, 'application/pdf'), name: file.name || 'statement.pdf', type: 'application/pdf' } : null;
+  return { pages, orig };
+}
+async function addStatementFiles(reportId, files) {
+  const tooBig = [...files].filter(f => f.size > MAX_UPLOAD);
+  if (tooBig.length) toast(tooBig.map(f => f.name || 'A file').join(', ') + ' is over 25 MB, so it was skipped.');
+  const list = (await expandFiles([...files].filter(f => f.size <= MAX_UPLOAD))).filter(f => /^image\//.test(f.type) || f.type === 'application/pdf' || /\.(pdf|jpe?g|png|heic|webp)$/i.test(f.name || ''));
+  if (!list.length) { toast('Choose a screenshot, photo, PDF or Word file of your statement.'); return; }
+  for (const file of list) {
+    const holder = uid('p');
+    Model.update(reportId, r => ({ ...r, statements: [...(r.statements || []), { id: holder, imageId: null, name: String(file.name || 'Statement').slice(0, 60), w: 0, h: 0, card: '', ai: 'processing', aiNote: '', rows: [] }] }));
+    try {
+      const { pages, orig } = await processStatementFile(file);
+      if (!Svc.store) return;
+      const made = [];
+      for (const pg of pages) {
+        const imageId = uid('i');
+        const withOrig = !made.length && orig;
+        try { await Svc.store.putImage(imageId, pg.blob, { w: pg.w, h: pg.h }, withOrig ? orig : null); }
+        catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the statement page. Check your connection and add it again.'); }
+        made.push({ ...pg, imageId, id: made.length ? uid('p') : holder, orig: !!withOrig });
+      }
+      const reading = aiOn();
+      Model.update(reportId, r => {
+        const at = (r.statements || []).findIndex(p => p.id === holder); if (at < 0) return r;
+        const st = r.statements.slice();
+        st.splice(at, 1, ...made.map(m => ({ id: m.id, group: holder, orig: m.orig, imageId: m.imageId, name: m.name, w: m.w, h: m.h, card: '', ai: reading ? 'reading' : null, aiNote: '', rows: [] })));
+        return { ...r, statements: st };
+      });
+      if (reading) for (const m of made) queueAI({ reportId, pageId: m.id, blobs: [m.blob], imageId: m.imageId });
+    } catch (e) {
+      Model.update(reportId, r => patchPage(r, holder, p => ({ ...p, ai: 'failed', aiNote: (e && e.message) || 'Couldn’t add that file.' })));
+    }
+  }
+}
+// The statements as uploaded: each PDF as it was, and each screenshot or photo as a picture
+async function statementFiles(r) {
+  const files = [], done = new Set();
+  for (const p of r.statements || []) {
+    if (!p.imageId || done.has(p.group || p.id)) continue;
+    const o = p.orig && Svc.store.getOriginal ? await Svc.store.getOriginal(p.imageId).catch(() => null) : null;
+    if (o && o.blob) { files.push({ blob: o.blob, ext: 'pdf', name: p.name.replace(/ p1$/, '') }); done.add(p.group || p.id); continue; }
+    const img = await Svc.store.getImage(p.imageId).catch(() => null);
+    if (img && img.blob) files.push({ blob: img.blob, ext: 'jpg', name: p.name });
+  }
+  return files.map((f, i) => ({ ...f, name: C.safeName('Statement ' + String(i + 1).padStart(2, '0') + (f.name ? ' - ' + f.name : '')) }));
+}
+async function exportStatementFiles(r) {
+  const files = await statementFiles(r);
+  if (!files.length) { toast('There are no statement pages on this report.'); return false; }
+  const zip = new window.JSZip();
+  for (const f of files) zip.file(f.name + '.' + f.ext, f.blob);
+  return saveFile(C.fileBase(r) + ' Bank Statement files.zip', await zip.generateAsync({ type: 'blob' }));
+}
+async function downloadStatementPage(p, original) {
+  if (original) {
+    const o = await Svc.store.getOriginal(p.imageId).catch(() => null);
+    if (o && o.blob) return saveFile(C.safeName(p.name.replace(/ p1$/, '') || 'Statement') + '.pdf', o.blob);
+  }
+  const img = await Svc.store.getImage(p.imageId).catch(() => null);
+  if (!img || !img.blob) { toast('Couldn’t load that page.'); return false; }
+  return saveFile(C.safeName(p.name || 'Statement page') + '.jpg', img.blob);
+}
+// A receipt for a charge that has none (for example one that came from the statement)
+async function attachReceiptFile(reportId, chargeId, file) {
+  if (file.size > MAX_UPLOAD) { toast((file.name || 'That file') + ' is over 25 MB.'); return; }
+  try {
+    const img = await processFile(file);
+    const imageId = uid('i');
+    try { await Svc.store.putImage(imageId, img.blob, { w: img.w, h: img.h }, img.orig); }
+    catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the receipt. Check your connection and try again.'); }
+    Model.update(reportId, r => patchCharge(r, chargeId, { imageId }));
+    toast('Receipt attached.');
+  } catch (e) { toast((e && e.message) || 'Couldn’t attach that receipt.'); }
+}
+async function exportStatementPdf(r) {
+  const pages = [];
+  for (const p of r.statements || []) {
+    const img = p.imageId ? await Svc.store.getImage(p.imageId).catch(() => null) : null;
+    pages.push({ data: img && img.blob ? new Uint8Array(await img.blob.arrayBuffer()) : null, w: (img && img.w) || p.w || 1, h: (img && img.h) || p.h || 1, label: p.name });
+  }
+  if (!pages.length) { toast('There are no statement pages on this report.'); return false; }
+  const items = C.statementList(r);
+  const missing = C.statementCheck(r).missing.map(c => (c.date ? C.fmtNice(c.date) : 'Undated') + ' · ' + (C.CAT[c.category] ? C.CAT[c.category].label : 'Charge') + (c.vendor ? ' · ' + c.vendor : '') + (C.chargeCAD(c) !== null ? ' · ' + cad(C.chargeCAD(c)) : ''));
+  const s = C.itemizedSummary(r);
+  const cards = [...new Set((r.statements || []).map(p => p.card).filter(Boolean))];
+  const sub = [(r.customer || 'Untitled') + ' itemized expenses' + (s.first ? ' · ' + rangeText(s.first, s.last) : ''), 'Employee: ' + (r.name || '—')];
+  if (cards.length) sub.push('Card: ' + cards.join(', '));
+  const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter', compress: true });
+  doc.setProperties({ title: C.fileBase(r) + ' Bank Statement', author: r.name || '', creator: ENV.title });
+  C.pdfStatement(doc, { heading: (r.customer || '') + ' · ' + (r.name || '') + ' · bank statement', sub, items, missing, pages, fresh: true });
+  return saveFile(C.fileBase(r) + ' Bank Statement.pdf', doc.output('blob'));
+}
+
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 async function expandFiles(files) {
   const out = [];
@@ -652,7 +447,7 @@ async function addFiles(reportId, files) {
       catch (e) { writeFailed(e); if (Svc.access !== 'ok') return; throw new Error('Couldn’t save the photo. Check your connection and add it again.'); }
       const reading = aiOn();
       Model.update(reportId, r => patchCharge(r, cid, { imageId, ai: reading ? 'reading' : null, currency: reading ? null : 'CAD' }));
-      if (reading) queueAI({ reportId, chargeId: cid, blobs: img.aiBlobs });
+      if (reading) queueAI({ reportId, chargeId: cid, blobs: img.aiBlobs, imageId });
     } catch (e) {
       Model.update(reportId, r => patchCharge(r, cid, { ai: 'failed', currency: 'CAD', aiNote: (e && e.message) || 'Couldn’t add that file.' }));
     }
@@ -660,22 +455,7 @@ async function addFiles(reportId, files) {
 }
 
 /* ---------- downloads & exports ---------- */
-async function saveFile(filename, blob) {
-  if (Svc.downloads) {
-    try { await Svc.downloads.save({ filename, data: blob }); return true; }
-    catch (e) {
-      if (e && e.code === 'declined') return false;
-      if (e && e.code === 'rate_limited') { toast('A save is already open. Finish it, then try again.'); return false; }
-      toast('That file couldn’t be saved here (' + ((e && e.code) || 'error') + ').'); return false;
-    }
-  }
-  if (!Svc.inViewer) {
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000); return true;
-  }
-  toast('Downloads aren’t available in this view. Open MyExpense in Claude to save files.');
-  return false;
-}
+function saveFile(filename, blob) { return PLAT.saveFile(Svc, filename, blob, toast); }
 async function exportXlsx(r) {
   const tpl = b64ToBytes(r.type === 'perdiem' ? TPL.perdiem : TPL.itemized);
   const res = r.type === 'perdiem' ? await C.perDiemXlsx(window.JSZip, tpl, r) : await C.itemizedXlsx(window.JSZip, tpl, r);
@@ -735,9 +515,9 @@ async function downloadReceipt(c) {
 function newReport(type) {
   const base = { id: uid('r'), type, name: Model.settings.name || '', customer: '', createdAt: Date.now(), updatedAt: Date.now() };
   if (type === 'perdiem') return { ...base, start: '', end: '', partialMode: null, partialDays: [] };
-  return { ...base, manager: Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron', location: '', charges: [] };
+  return { ...base, manager: Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron', location: '', charges: [], statements: [] };
 }
-function isBlank(r) { return r.type === 'perdiem' ? !r.customer && !r.start && !r.end : !r.customer && !(r.charges || []).length; }
+function isBlank(r) { return r.type === 'perdiem' ? !r.customer && !r.start && !r.end : !r.customer && !(r.charges || []).length && !(r.statements || []).length; }
 function reportStatus(r) {
   if (r.type === 'perdiem') {
     const p = C.perDiemProblems(r); const s = C.perDiemSummary(r);
@@ -754,33 +534,15 @@ function EnvBand() {
 }
 function StorePill() {
   if (Svc.access !== 'ok') return null;
-  return html`<span class="store-pill"><${Icon} n="lock" size=${16} />Private to you: only you can see these reports</span>`;
+  return html`<span class="store-pill"><${Icon} n=${WORDS.pillIcon} size=${16} />${WORDS.pill}</span>`;
 }
 function SaveState() {
   const s = Model.saveState;
   if (s === 'saving') return html`<span>Saving…</span>`;
   if (s === 'retrying') return html`<span style="color:var(--warn)">Not saved yet. Retrying…</span>`;
   if (s === 'error') return html`<span style="color:var(--bad)">Not saved</span>`;
-  if (s === 'saved') return html`<span>Saved</span>`;
+  if (s === 'saved') return html`<span>${WORDS.saved}</span>`;
   return null;
-}
-
-// Shown instead of the app whenever this viewer can't have a private, saved area of their own.
-function AccessGate() {
-  const k = Svc.access;
-  const copy = {
-    outside: ['Open MyExpense from its Claude link', 'Each person’s expenses are tied to their own Claude account and kept private to them, so MyExpense only works from its link on claude.ai while you’re signed in.'],
-    'signed-out': ['Sign in to use MyExpense', 'Your expense reports are tied to your Claude account. Sign in to claude.ai, then open this link again.'],
-    'no-access': ['You can’t save expenses here yet', 'You can open this page, but your access doesn’t let you add expenses. Ask the person who shared MyExpense with you for access that lets you use it. Nothing you entered was saved.'],
-    error: ['Your reports couldn’t be loaded', 'MyExpense couldn’t reach your saved reports. Check your connection, then reload the page.'],
-  }[k];
-  if (!copy) return html`<div class="wrap"><div class="list"><div class="skel"></div><div class="skel"></div></div></div>`;
-  return html`<div class="wrap"><div class="gate">
-    <span class="gate-icon"><${Icon} n="lock" size=${26} /></span>
-    <h1>${copy[0]}</h1>
-    <p class="muted">${copy[1]}</p>
-    <p class="faint small">MyExpense never shows one person’s expenses to anyone else, including the person who shared it.</p>
-  </div></div>`;
 }
 
 function Home({ open, openSettings }) {
@@ -809,7 +571,7 @@ function Home({ open, openSettings }) {
     </div>
     <div class="section-h"><h2>Your reports</h2>${Model.loaded && reps.length > 0 && html`<span class="muted small">${plural(reps.length, 'report')}</span>`}</div>
     ${!Model.loaded ? html`<div class="list"><div class="skel"></div><div class="skel"></div></div>`
-      : reps.length === 0 ? html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No reports yet</b><p class="small">Start a per diem or itemized report above. Reports save as you type, and only you can see them.</p></div>`
+      : reps.length === 0 ? html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No reports yet</b><p class="small">${WORDS.empty}</p></div>`
       : html`<div class="list">${reps.map(r => html`<${ReportCard} key=${r.id} r=${r} onOpen=${() => open(r)} />`)}</div>`}
   </div>`;
 }
@@ -961,7 +723,10 @@ function ItemizedEditor({ r }) {
     const sat = C.saturdayOf(c.date); if (!byWeek.has(sat)) byWeek.set(sat, []); byWeek.get(sat).push(c);
   }
   const weekTotal = (sat) => (sum.weeks.find(w => w.weekEnding === sat) || { total: 0 }).total;
-  const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
+  const chk = (r.statements || []).length ? C.statementCheck(r) : null;
+  const missingR = C.missingReceipts(r);
+  const onSt = (c) => !chk ? null : chk.onStatement.has(c.id) ? (chk.onStatement.get(c.id).mismatch ? { state: 'mismatch', amount: chk.onStatement.get(c.id).row.amount } : { state: 'on' }) : chk.ready && c.ai !== 'reading' && c.ai !== 'processing' ? { state: 'missing' } : null;
+  const row = (c) => html`<${ChargeItem} key=${c.id} c=${c} st=${onSt(c)} open=${openId === c.id} onToggle=${() => setOpenId(openId === c.id ? null : c.id)} reportId=${r.id} onView=${() => setViewer(c)} />`;
 
   return html`
   <div class="wrap">
@@ -989,8 +754,8 @@ function ItemizedEditor({ r }) {
       <input ref=${camRef} id="it-cam" class="vh" type="file" accept="image/*" capture="environment" onChange=${e => { if (e.target.files.length) addFiles(r.id, e.target.files); e.target.value = ''; }} />
       <input ref=${upRef} id="it-up" class="vh" type="file" accept="image/*,application/pdf,.docx" multiple onChange=${e => { if (e.target.files.length) addFiles(r.id, e.target.files); e.target.value = ''; }} />
       <p class="note">${aiOn()
-        ? html`<${Icon} n="sparkle" size=${14} /> Claude reads each receipt or card statement and fills in the charge for you to check. Photos, PDFs, Word files with pictures and pasted screenshots all work.`
-        : 'Each photo becomes a charge with the receipt attached. Fill in the date, type and amount from it. Photos, PDFs, Word files with pictures and pasted screenshots all work.'}</p>
+        ? html`<${Icon} n="sparkle" size=${14} /> Claude reads each receipt and fills in the charge for you to check. Photos, PDFs, Word files with pictures and pasted screenshots all work. Card statements go under Bank statement, below.`
+        : 'Each photo becomes a charge with the receipt attached. Fill in the date, type and amount from it. Photos, PDFs, Word files with pictures and pasted screenshots all work. Card statements go under Bank statement, below.'}</p>
     </section>
 
     ${r.charges.length === 0 && html`<div class="empty"><${Icon} n="receipt" size=${28} /><b style="color:var(--ink)">No charges yet</b><p class="small">Usually claimed: Uber and taxi rides, vehicle rentals, airline baggage fees and fuel. Parking goes on only when you OK it.</p></div>`}
@@ -1005,6 +770,8 @@ function ItemizedEditor({ r }) {
       <div class="charges">${byWeek.get(sat).map(row)}</div>
     </div>`)}
 
+    <${StatementSection} r=${r} />
+
     ${r.charges.length > 0 && html`<section class="panel">
       <div class="panel-h"><h2>Totals</h2><span class="muted small">CAD</span></div>
       <div class="panel-b">
@@ -1013,6 +780,7 @@ function ItemizedEditor({ r }) {
           ${sum.weeks.length === 0 && html`<div class="row faint"><span>No complete charges yet</span><span>${cad(0)}</span></div>`}
           <div class="row tot"><span>Grand total</span><span>${cad(sum.total)}</span></div>
         </div>
+        ${missingR.length > 0 && html`<div class="left-off"><b class="small" style="color:var(--warn)">Missing receipts</b><ul class="plain small">${missingR.map(c => html`<li key=${c.id}><button class="linkbtn" onClick=${() => { setOpenId(c.id); setTimeout(() => { const el = document.querySelector('[aria-expanded="true"]'); if (el) el.scrollIntoView({ block: 'center' }); }, 50); }}>${label(c)}${C.chargeCAD(c) !== null ? ' · ' + cad(C.chargeCAD(c)) : ''}</button></li>`)}</ul><span class="small muted">These charges are on the report without a receipt. Attach one to each if you have it.</span></div>`}
         ${sum.left.length > 0 && html`<div class="left-off"><b class="small" style="color:var(--warn)">Not on the report yet</b><ul class="plain small">${sum.left.map(x => html`<li>${x.c.date ? C.fmtNice(x.c.date) : 'Undated'} ${x.c.category && C.CAT[x.c.category] ? '· ' + C.CAT[x.c.category].label : ''}${x.c.vendor ? ' · ' + x.c.vendor : ''}: ${x.issue}</li>`)}</ul></div>`}
       </div>
     </section>`}
@@ -1025,7 +793,7 @@ function shortIssue(t) {
   if (/CAD amount/.test(t)) return 'Needs CAD amount';
   return t.replace(/^needs/, 'Needs').replace(/^is still/, 'Still').replace(/^amount/, 'Amount');
 }
-function ChargeItem({ c, open, onToggle, reportId, onView }) {
+function ChargeItem({ c, st, open, onToggle, reportId, onView }) {
   const url = useImageURL(c.imageId);
   const issue = C.chargeIssue(c);
   const cat = C.CAT[c.category];
@@ -1036,6 +804,10 @@ function ChargeItem({ c, open, onToggle, reportId, onView }) {
   else {
     if (c.ai === 'read' && !c.checked) chips.push(html`<span class="chip warn"><span class="dot"></span>Check details</span>`);
     if (issue) chips.push(html`<span class="chip bad"><span class="dot"></span>${shortIssue(issue)}</span>`);
+    if (st && st.state === 'on') chips.push(html`<span class="chip ok"><${Icon} n="check" size=${12} />On statement</span>`);
+    if (st && st.state === 'mismatch') chips.push(html`<span class="chip bad"><span class="dot"></span>Statement shows ${cad(st.amount)}</span>`);
+    if (st && st.state === 'missing') chips.push(html`<span class="chip warn"><span class="dot"></span>Not on statement</span>`);
+    if (!c.imageId) chips.push(html`<span class="chip warn"><span class="dot"></span>No receipt</span>`);
   }
   return html`<div class="charge">
     <button class="charge-row" onClick=${onToggle} aria-expanded=${open}>
@@ -1059,7 +831,9 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
     Model.update(reportId, r => {
       const charges = r.charges.filter(x => x.id !== c.id);
       if (c.imageId && Svc.store && !charges.some(x => x.imageId === c.imageId)) Svc.store.deleteImage(c.imageId).catch(() => {});
-      return { ...r, charges };
+      // its statement line comes off the claim too
+      const statements = (r.statements || []).map(p => (p.rows.some(x => x.chargeId === c.id) ? { ...p, rows: p.rows.map(x => (x.chargeId === c.id ? { ...x, chargeId: null, claim: false } : x)) } : p));
+      return { ...r, charges, statements };
     });
   }
   const busy = c.ai === 'processing' || c.ai === 'reading';
@@ -1093,6 +867,7 @@ function ChargeEdit({ c, url, reportId, onView, onDone }) {
       <//>`}
     </div>
     ${cat && !cat.q && html`<label class="check"><input type="checkbox" checked=${!!c.approved} onChange=${e => set({ approved: e.target.checked })} /><span><b>Include on this report.</b> ${cat.label} isn’t on the usual list (taxi, rental, baggage, fuel). Tick this only if it’s approved.</span></label>`}
+    ${!c.imageId && !busy && html`<div class="no-receipt"><span class="small">No receipt on this charge. It stays on the report; attach the receipt if you have it.</span><${AttachButton} reportId=${reportId} chargeId=${c.id} /></div>`}
     <div class="edit-actions">
       <button class="btn sm ghost danger" onClick=${del}><${Icon} n="trash" size=${18} />Delete</button>
       ${c.ai === 'read' && !c.checked
@@ -1111,6 +886,157 @@ function ImageViewer({ c, onClose }) {
       <div class="sheet-h"><h2>${c.vendor || 'Receipt'}${c.date ? ' · ' + C.fmtNice(c.date) : ''}</h2><button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
       ${url ? html`<img src=${url} alt="Receipt photo" />` : html`<div class="skel" style="height:300px"></div>`}
       <button class="btn" disabled=${busy || !url} onClick=${async () => { setBusy(true); try { await downloadReceipt(c); } finally { setBusy(false); } }}><${Icon} n="download" />${isPdf ? 'Download receipt PDF' : 'Download photo'}</button>
+    </div>
+  </div>`;
+}
+
+/* ---- bank statement ---- */
+const label = (c) => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'));
+function StatementSection({ r }) {
+  const upRef = useRef(null), camRef = useRef(null);
+  const [drag, setDrag] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  const pages = r.statements || [];
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const chk = C.statementCheck(r);
+  const noReceipt = C.missingReceipts(r);
+  const offers = C.receiptSuggestions(r);
+  const add = (files) => { if (files && files.length) addStatementFiles(r.id, files); };
+  const trouble = chk.missing.length || chk.mismatches.length || noReceipt.length;
+  return html`<section class=${'panel stmt' + (drag ? ' drag' : '')} aria-labelledby="stmt-h"
+      onDragOver=${e => { e.preventDefault(); setDrag(true); }} onDragLeave=${() => setDrag(false)}
+      onDrop=${e => { e.preventDefault(); setDrag(false); if (e.dataTransfer) add(e.dataTransfer.files); }}>
+    <div class="panel-h"><h2 id="stmt-h">Bank statement</h2>${pages.length > 0 && html`<span class="muted small">${plural(pages.length, 'page')}</span>`}</div>
+    <div class="panel-b">
+      <p class="muted small">Add the card statement pages that show these charges, as screenshots, photos or a PDF. Every charge ticked on the statement goes on the report, with or without a receipt. Each one is matched to its receipt, and a receipt in another currency gets its CAD amount from the statement. The statement downloads on its own, separate from the receipts.</p>
+      <div class="capture-btns">
+        ${touch && html`<button class="btn" onClick=${() => camRef.current && camRef.current.click()}><${Icon} n="camera" />Photograph a page</button>`}
+        <button class="btn" onClick=${() => upRef.current && upRef.current.click()}><${Icon} n="upload" />Add statement pages</button>
+      </div>
+      <input ref=${camRef} id="st-cam" class="vh" type="file" accept="image/*" capture="environment" onChange=${e => { add(e.target.files); e.target.value = ''; }} />
+      <input ref=${upRef} id="st-up" class="vh" type="file" accept="image/*,application/pdf,.docx" multiple onChange=${e => { add(e.target.files); e.target.value = ''; }} />
+      ${chk.ready && r.charges.length > 0 && html`<div class=${'stmt-sum' + (trouble ? ' warn' : ' ok')}>
+        <${Icon} n=${trouble ? 'alert' : 'check'} size=${18} />
+        <span>${chk.onStatement.size} of ${plural(r.charges.length, 'charge')} on the report ${chk.onStatement.size === 1 ? 'is' : 'are'} on your statement.${chk.mismatches.length ? ' ' + plural(chk.mismatches.length, 'amount') + ' ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match.' : ''}${chk.missing.length ? ' Not on the statement: ' + chk.missing.map(label).join(', ') + '.' : ''}${noReceipt.length ? ' Missing ' + (noReceipt.length === 1 ? 'a receipt' : plural(noReceipt.length, 'receipt')) + ': ' + noReceipt.map(label).join(', ') + '.' : ''}</span>
+      </div>`}
+      ${offers.map(o => html`<div class="stmt-bar" key=${o.receipt.id}><span class="small">Is your ${o.receipt.vendor || 'receipt'} receipt (${o.receipt.currency} ${C.round2(o.receipt.amount || 0).toFixed(2)}, ${o.receipt.date ? C.fmtMonD(o.receipt.date) : 'undated'}) for ${o.row.description || 'the statement line'} (${cad(o.row.amount)}, ${o.row.date ? C.fmtMonD(o.row.date) : 'undated'})?</span>
+        <button class="btn sm primary" onClick=${() => Model.update(r.id, q => C.attachReceipt(q, o.charge.id, o.receipt.id))}>Yes, match them</button></div>`)}
+      ${pages.map((p, i) => html`<${StatementPage} key=${p.id} r=${r} p=${p} n=${i + 1} links=${chk.links} onView=${() => setViewer(p.id)} />`)}
+    </div>
+    ${viewer && pages.some(p => p.id === viewer) && html`<${StatementViewer} p=${pages.find(p => p.id === viewer)} onClose=${() => setViewer(null)} />`}
+  </section>`;
+}
+const PAIRED = ['linked', 'same', 'fx'];
+function StatementPage({ r, p, n, links, onView }) {
+  const url = useImageURL(p.imageId);
+  const [all, setAll] = useState(false);
+  const [edit, setEdit] = useState(null);
+  const busy = p.ai === 'processing' || p.ai === 'reading';
+  const onClaim = (x) => x.claim || (links.get(x.id) && PAIRED.includes(links.get(x.id).how));
+  const claimed = p.rows.filter(onClaim);
+  const shown = all ? p.rows : claimed;
+  async function remove() {
+    const ok = await askConfirm({ title: 'Remove this statement page?', body: 'The page comes off the report. Charges already on the report stay on it.', yes: 'Remove page', danger: true });
+    if (!ok) return;
+    Model.update(r.id, x => ({ ...x, statements: x.statements.filter(q => q.id !== p.id) }));
+    if (p.imageId && Svc.store && !(r.statements || []).some(q => q.id !== p.id && q.imageId === p.imageId)) Svc.store.deleteImage(p.imageId).catch(() => {});
+  }
+  function addRow() {
+    const id = uid('s');
+    Model.update(r.id, x => patchPage(x, p.id, q => ({ ...q, rows: [...q.rows, { id, date: null, description: '', amount: null, currency: 'CAD', credit: false, foreign: null, category: 'taxi', marked: false, claim: true, chargeId: null, source: 'you' }] })));
+    setAll(true); setEdit(id);
+  }
+  let status;
+  if (p.ai === 'processing') status = html`<span class="chip info"><span class="spin"></span>Adding page</span>`;
+  else if (p.ai === 'reading') status = html`<span class="chip info"><span class="spin"></span>Reading statement</span>`;
+  else if (p.rows.length) status = html`<span class="chip info">${plural(claimed.length, 'charge')} on the report, of ${p.rows.length} lines</span>`;
+  return html`<div class="stmt-page">
+    <div class="stmt-head">
+      <button class="thumb stmt-thumb" onClick=${onView} disabled=${!url} aria-label=${'View statement page ' + n}>${url ? html`<img src=${url} alt="" />` : busy ? html`<span class="spin"></span>` : html`<${Icon} n="receipt" />`}</button>
+      <div style="display:grid;gap:4px;min-width:0">
+        <b>Page ${n}<span class="muted" style="font-weight:400">${p.name ? ' · ' + p.name : ''}${p.card ? ' · ' + p.card : ''}</span></b>
+        <span class="l2">${status}</span>
+        <div class="row-btns"><button class="btn sm ghost danger" onClick=${remove}><${Icon} n="trash" size=${16} />Remove page</button></div>
+      </div>
+    </div>
+    ${p.aiNote && html`<p class="small" style="color:var(--warn)">${p.aiNote}</p>`}
+    ${shown.length > 0 && html`<ul class="stmt-rows">${shown.map(x => html`<${StatementRow} key=${x.id} r=${r} p=${p} x=${x} link=${links.get(x.id)} editing=${edit === x.id} onEdit=${() => setEdit(edit === x.id ? null : x.id)} />`)}</ul>`}
+    <div class="row-btns">
+      ${p.rows.length > claimed.length && html`<button class="linkbtn" onClick=${() => setAll(!all)}>${all ? 'Show only charges on the report' : 'Show all ' + p.rows.length + ' lines'}</button>`}
+      ${!busy && html`<button class="linkbtn" onClick=${addRow}>Add a charge from this page</button>`}
+    </div>
+  </div>`;
+}
+function AttachButton({ reportId, chargeId, label }) {
+  const ref = useRef(null);
+  const [busy, setBusy] = useState(false);
+  return html`<span>
+    <button class="btn sm" disabled=${busy} onClick=${() => ref.current && ref.current.click()}><${Icon} n="receipt" size=${16} />${busy ? 'Attaching…' : label || 'Attach receipt'}</button>
+    <input ref=${ref} class="vh" type="file" accept="image/*,application/pdf" aria-label="Receipt to attach" onChange=${async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; setBusy(true); try { await attachReceiptFile(reportId, chargeId, f); } finally { setBusy(false); } }} />
+  </span>`;
+}
+function StatementRow({ r, p, x, link, editing, onEdit }) {
+  const set = (patch) => Model.update(r.id, q => patchRow(q, p.id, x.id, patch));
+  const id = (k) => 'sr-' + x.id + '-' + k;
+  const c = link && link.charge;
+  const paired = link && PAIRED.includes(link.how);
+  const what = c ? (C.CAT[c.category] ? C.CAT[c.category].label : 'charge') + (c.vendor ? ' · ' + c.vendor : '') : '';
+  // Ticking a line puts it on the report; unticking takes off the charge it made, if it has no receipt
+  function toggle(on) {
+    if (on) { set({ claim: true }); return; }
+    Model.update(r.id, q => {
+      const ch = x.chargeId && q.charges.find(y => y.id === x.chargeId);
+      const out = patchRow(q, p.id, x.id, { claim: false, chargeId: null });
+      return ch && !ch.imageId ? { ...out, charges: out.charges.filter(y => y.id !== ch.id) } : out;
+    });
+  }
+  const locked = paired && c && !!c.imageId; // paired with a receipt: delete the charge to take it off
+  let state = null;
+  if (paired) {
+    const v = C.chargeCAD(c);
+    const off = (x.currency || 'CAD') === 'CAD' && v !== null && Math.abs(v - x.amount) >= 0.005;
+    state = html`${off
+      ? html`<span class="chip bad"><span class="dot"></span>The report has ${cad(v)} for ${what}</span>
+          <button class="btn sm" onClick=${() => Model.update(r.id, q => patchCharge(q, c.id, c.currency === 'CAD' ? { amount: x.amount } : { cad: x.amount }))}>Use ${cad(x.amount)} from the statement</button>`
+      : html`<span class="chip ok"><${Icon} n="check" size=${14} />On the report: ${what}</span>`}
+      ${c.imageId ? html`<span class="chip ok"><${Icon} n="receipt" size=${12} />Receipt</span>` : html`<span class="chip warn"><span class="dot"></span>No receipt</span><${AttachButton} reportId=${r.id} chargeId=${c.id} />`}`;
+  } else if (link && link.how === 'cad') {
+    state = html`<button class="btn sm" onClick=${() => Model.update(r.id, q => patchRow(patchCharge(q, c.id, { cad: x.amount }), p.id, x.id, { chargeId: c.id }))}>
+      Is this ${c.vendor || 'the charge'} (${c.currency} ${C.round2(c.amount || 0).toFixed(2)})? Use ${cad(x.amount)} as its CAD</button>`;
+  } else if (link && link.how === 'dupe') state = html`<span class="chip info">Also on another page</span>`;
+  else if (x.claim && x.amount === null) state = html`<span class="chip warn"><span class="dot"></span>Add the amount to put it on the report</span>`;
+  const fx = x.foreign ? x.foreign.currency + ' ' + x.foreign.amount.toFixed(2) : '';
+  return html`<li class=${'stmt-row' + (x.claim || paired ? ' on' : '')}>
+    <div class="stmt-line">
+      <input id=${id('claim')} type="checkbox" checked=${!!(x.claim || paired)} disabled=${x.credit || locked} aria-label=${'Put ' + (x.description || 'this charge') + ' on the report'} onChange=${e => toggle(e.target.checked)} />
+      <label for=${id('claim')} class="stmt-desc"><span class="d mono">${x.date ? C.fmtMonD(x.date) : '—'}</span><span>${x.description || html`<span class="faint">No description</span>`}${fx && html`<span class="faint"> · ${fx}</span>`}${x.credit && html`<span class="faint"> · credit</span>`}</span></label>
+      <span class="mono stmt-amt">${x.amount !== null ? C.round2(x.amount).toFixed(2) : '—'}</span>
+      <button class="icon-btn sm" onClick=${onEdit} aria-label=${'Edit ' + (x.description || 'this line')} aria-expanded=${editing}><${Icon} n="edit" size=${16} /></button>
+    </div>
+    ${state && html`<div class="stmt-state">${state}</div>`}
+    ${editing && html`<div class="fields stmt-edit">
+      <${Field} id=${id('date')} label="Date"><input id=${id('date')} class="inp" type="date" value=${x.date || ''} onChange=${e => set({ date: e.target.value || null })} /><//>
+      <${Field} id=${id('desc')} label="Description"><${TextInput} id=${id('desc')} value=${x.description} max=${60} onValue=${v => set({ description: v })} /><//>
+      <${Field} id=${id('amt')} label=${'Amount (' + (x.currency || 'CAD') + ')'}><${MoneyInput} id=${id('amt')} value=${x.amount} onValue=${v => set({ amount: v })} /><//>
+      <${Field} id=${id('cat')} label="Type on the report">
+        <select id=${id('cat')} class="inp" value=${x.category} onChange=${e => set({ category: e.target.value })}>${C.CATS.map(k => html`<option value=${k.key}>${k.label}</option>`)}</select>
+      <//>
+      <div class="row-btns"><button class="btn sm" onClick=${onEdit}>Done</button>${x.source === 'you' && html`<button class="btn sm ghost danger" onClick=${() => { toggle(false); Model.update(r.id, q => patchPage(q, p.id, pg => ({ ...pg, rows: pg.rows.filter(y => y.id !== x.id) }))); }}>Delete line</button>`}</div>
+    </div>`}
+  </li>`;
+}
+function StatementViewer({ p, onClose }) {
+  const url = useImageURL(p.imageId);
+  const [busy, setBusy] = useState(false);
+  const dl = async (orig) => { setBusy(true); try { await downloadStatementPage(p, orig); } finally { setBusy(false); } };
+  return html`<div class="scrim" onClick=${e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class="sheet viewer stmt-viewer" role="dialog" aria-label="Statement page">
+      <div class="sheet-h"><h2>${p.name || 'Statement page'}</h2><button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
+      ${url ? html`<img src=${url} alt="Statement page" />` : html`<div class="skel" style="height:300px"></div>`}
+      <div class="row-btns">
+        <button class="btn" disabled=${busy || !url} onClick=${() => dl(false)}><${Icon} n="download" />Download this page</button>
+        ${p.orig && html`<button class="btn" disabled=${busy} onClick=${() => dl(true)}><${Icon} n="download" />Download the PDF as uploaded</button>`}
+      </div>
     </div>
   </div>`;
 }
@@ -1145,7 +1071,20 @@ function ExportSheet({ r, onClose }) {
     if (fx) notes.push('CAD amount entered by you for ' + plural(fx, 'foreign-currency receipt') + '.');
     notes.push('HST columns left blank.');
     receipts = C.receiptList(r);
+    const noR = C.missingReceipts(r).filter(c => !C.chargeIssue(c));
+    if (noR.length) warns.push('Missing ' + (noR.length === 1 ? 'a receipt' : plural(noR.length, 'receipt')) + ': ' + noR.map(c => label(c)).join(', ') + '. ' + (noR.length === 1 ? 'It’s' : 'They’re') + ' on the report without one.');
+    const pages = r.statements || [];
+    const stReading = pages.filter(p => p.ai === 'reading' || p.ai === 'processing').length;
+    if (stReading) warns.push(plural(stReading, 'statement page') + ' still being read.');
+    if (pages.length) {
+      const chk = C.statementCheck(r);
+      if (chk.missing.length) warns.push(plural(chk.missing.length, 'charge') + ' on the report ' + (chk.missing.length === 1 ? 'isn’t' : 'aren’t') + ' on your bank statement: ' + chk.missing.map(c => (c.date ? C.fmtMonD(c.date) + ' ' : '') + (c.vendor || (C.CAT[c.category] ? C.CAT[c.category].label : 'charge'))).join(', ') + '. Add the statement page that shows ' + (chk.missing.length === 1 ? 'it' : 'them') + '.');
+      if (chk.mismatches.length) warns.push(plural(chk.mismatches.length, 'charge') + ' on the report ' + (chk.mismatches.length === 1 ? 'doesn’t' : 'don’t') + ' match the amount on your statement. Fix ' + (chk.mismatches.length === 1 ? 'it' : 'them') + ' under Bank statement.');
+      if (chk.unlisted.length) warns.push(plural(chk.unlisted.length, 'line') + ' ticked on your statement ' + (chk.unlisted.length === 1 ? 'needs' : 'need') + ' an amount to go on the report.');
+      if (chk.suggestions.length) warns.push('Your statement may show the CAD for ' + plural(chk.suggestions.length, 'foreign-currency charge') + '. Check under Bank statement.');
+    }
   }
+  const stTicked = isPd ? 0 : C.statementList(r).length;
   const partialDates = isPd ? sum.weeks.flatMap(w => w.days).filter(d => d.partial).map(d => C.fmtNice(d.date)) : [];
   async function run(kind) {
     setBusy(kind);
@@ -1155,6 +1094,8 @@ function ExportSheet({ r, onClose }) {
       else if (kind === 'pdf') await exportPdf(r);
       else if (kind === 'rpdf') await exportReceiptsPdf(r);
       else if (kind === 'zip') await exportReceiptsZip(r);
+      else if (kind === 'stmt') await exportStatementPdf(r);
+      else if (kind === 'stzip') await exportStatementFiles(r);
     } catch (e) { console.error(e); toast('Couldn’t build the file: ' + (e && e.message ? e.message : 'unknown error')); }
     setBusy(null);
   }
@@ -1186,6 +1127,12 @@ function ExportSheet({ r, onClose }) {
         ${receipts.length === 0 ? html`<p class="small muted">No receipt photos on the charges in this report yet.</p>` : html`
           <${OutButton} ext="PDF" title="Receipts PDF" sub="Every receipt, two per page, numbered and labelled with date, type and amount" busy=${busy === 'rpdf'} disabled=${!!busy} onClick=${() => run('rpdf')} />
           <${OutButton} ext="ZIP" title="Receipt files" sub="Each receipt as its own file, named by number, date, type and amount" busy=${busy === 'zip'} disabled=${!!busy} onClick=${() => run('zip')} />`}
+      </div>`}
+      ${!isPd && html`<div class="out-group">
+        <span class="caps muted">Bank statement${(r.statements || []).length ? ' · ' + plural(r.statements.length, 'page') : ''}</span>
+        ${!(r.statements || []).length ? html`<p class="small muted">No statement pages on this report. Add them under Bank statement to download them here.</p>`
+          : html`<${OutButton} ext="PDF" title="Bank statement PDF" sub=${(stTicked ? 'The ' + plural(stTicked, 'statement charge') + ' on the claim, each with its report charge, then ' : 'Your ') + 'statement pages'} busy=${busy === 'stmt'} disabled=${!!busy} onClick=${() => run('stmt')} />
+            <${OutButton} ext="ZIP" title="Statement files" sub="Your statements as you uploaded them: PDFs as they were, screenshots and photos as pictures" busy=${busy === 'stzip'} disabled=${!!busy} onClick=${() => run('stzip')} />`}
       </div>`}
       <p class="faint small">File name: ${C.fileBase(r)}</p>
     </div>
@@ -1221,8 +1168,7 @@ function SettingsSheet({ onClose }) {
       <button class="btn primary" type="submit">Save details</button>
       <div class="terms" style="display:grid;gap:4px">
         <b style="font-family:var(--f-body)">Your privacy</b>
-        <span class="muted">Your reports and receipt photos are stored for your Claude account only. No one else who uses MyExpense can see them, including the person who shared it. Nothing is kept on this device.</span>
-        <span class="muted">${aiOn() ? 'When you add a receipt, the photo is sent to Claude to read the details.' : 'Receipt reading by Claude isn’t available here, so you’ll type in the details from each photo.'}</span>
+        ${PUI.privacy(aiOn()).map(t => html`<span class="muted">${t}</span>`)}
       </div>
       <button type="button" class="btn ghost danger" disabled=${wiping} onClick=${wipe}><${Icon} n="trash" size=${18} />${wiping ? 'Deleting…' : 'Delete all my data'}</button>
     </form>
@@ -1269,6 +1215,10 @@ function Editor({ id, back }) {
     ${exp && html`<${ExportSheet} r=${r} onClose=${() => setExp(false)} />`}`;
 }
 
+// The platform's own screens (sign-in, account), built with the same toolkit as the rest of the app
+const PUI = PLAT.ui({ html, useState, useEffect, useRef, Icon, toast, askConfirm, Field, TextInput, Svc, ENV, emit, lostAccess, plural, initServices });
+const WORDS = { pill: 'Private to you: only you can see these reports', pillIcon: 'lock', saved: 'Saved', empty: 'Start a per diem or itemized report above. Reports save as you type, and only you can see them.', ...(PUI.words || {}) };
+
 function App() {
   useTick();
   const [route, setRoute] = useState({ view: 'home' });
@@ -1292,8 +1242,8 @@ function App() {
     setSave('idle'); setRoute({ view: 'home' }); window.scrollTo(0, 0);
   }
   return html`
-    ${(route.view === 'home' || Svc.access !== 'ok') && html`<header class="bar"><${EnvBand} /><div class="bar-in"><div class="wordmark"><span class="stub" aria-hidden="true"></span>MyExpense${ENV.name !== 'prod' && html`<span class="envtag">${ENV.name.toUpperCase()}</span>`}</div></div></header>`}
-    ${Svc.access !== 'ok' ? html`<${AccessGate} />`
+    ${(route.view === 'home' || Svc.access !== 'ok') && html`<header class="bar"><${EnvBand} /><div class="bar-in"><div class="wordmark"><span class="stub" aria-hidden="true"></span>MyExpense${ENV.name !== 'prod' && html`<span class="envtag">${ENV.name.toUpperCase()}</span>`}</div>${PUI.HeaderRight && html`<${PUI.HeaderRight} />`}</div></header>`}
+    ${Svc.access !== 'ok' ? html`<${PUI.Gate} />`
       : route.view === 'home' ? html`<${Home} open=${open} openSettings=${() => setSettingsOpen(true)} />` : html`<${Editor} key=${route.id} id=${route.id} back=${back} />`}
     ${settingsOpen && Svc.access === 'ok' && html`<${SettingsSheet} onClose=${() => setSettingsOpen(false)} />`}
     <${ConfirmDialog} />
@@ -1302,4 +1252,3 @@ function App() {
 
 render(html`<${App} />`, document.getElementById('app'));
 })();
-</script>
