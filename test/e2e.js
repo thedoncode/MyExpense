@@ -174,6 +174,8 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     await page.click('text=New itemized report');
     await page.fill('#it-name', 'Alex Morgan');
     await page.fill('#it-cust', 'Alex itemized Contoso');
+    const mgr = await page.$eval('#it-mgr', el => ({ value: el.value, placeholder: el.placeholder }));
+    check(mgr.value === '' && mgr.placeholder === 'Manager’s first and last name', 'a new report’s manager name starts empty, with a placeholder: ' + JSON.stringify(mgr));
     await page.setInputFiles('#it-cam', path.join(FIX, 'uber.jpg'));
     await page.waitForTimeout(100);
     await page.setInputFiles('#it-up', path.join(FIX, 'rental.pdf')); // loads pdf.js through its integrity check
@@ -190,6 +192,7 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     await shot(page, 'C-alex-itemized');
     await page.click('.dock >> text=Download');
     await page.waitForSelector('text=Receipt files');
+    check(await page.isVisible('text=No manager name yet'), 'downloading without a manager name gives a reminder');
     for (const t of ['text=Excel workbook', 'text=Print-ready PDF', 'text=Receipts PDF', 'text=Receipt files']) {
       const b = await page.evaluate(() => window.__downloads.length);
       await page.click(t);
