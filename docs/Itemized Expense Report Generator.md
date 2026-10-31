@@ -18,7 +18,7 @@ If Name, Customer, or the charge source is missing, ask before generating.
 ## Fixed Assumptions (do not vary unless told otherwise)
 
 * **Department:** Service
-* **Manager:** carry over from the reference template (e.g. Nic Cameron) unless told otherwise
+* **Manager:** the manager name the user gives; ask if it's missing (there is no default)
 * **Location / currency:** use the currency shown on the bank statement (typically **CAD**). Record the CAD amount that actually posted to the card.
 * **Layout:** the Evertz "EXPENSE CLAIM REPORT" itemized template — never the per-diem layout.
 
@@ -58,7 +58,7 @@ The "EXPENSE CLAIM REPORT" per-week layout:
 * `WEEK ENDING` = that week's Saturday date
 * `NAME` = the employee name
 * `DEPARTMENT` = Service
-* `MANAGER NAME` = per template default
+* `MANAGER NAME` = the manager name the user gave
 * Location = per template (Canada / CAD)
 
 **Date row (row 10)**
