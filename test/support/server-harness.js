@@ -1,20 +1,21 @@
-// Starts a real MyExpense server against a throwaway MySQL/MariaDB database, plus a stand-in for the
-// Anthropic API, for the server and web tests.
-// Database settings: TEST_DB_HOST, TEST_DB_PORT, TEST_DB_USER, TEST_DB_PASSWORD (the user must be able
-// to create databases named mx_test_*).
+// Starts a real MyExpense server against a throwaway Postgres schema, plus a stand-in for the Anthropic
+// API, for the server and web tests. Like production on Supabase, the schema is set up by an
+// administrator (server/schema.sql) and the server connects as its own limited login, with row level
+// security on, so the tests run with the same permissions production has.
+// TEST_PG_ADMIN_URL: a Postgres login that can create schemas and roles.
 const http = require('http');
 const crypto = require('crypto');
-const mysql = require('mysql2/promise');
+const { Client } = require('pg');
 const { loadConfig } = require('../../server/config');
-const { connect } = require('../../server/db');
+const { connect, schemaSql } = require('../../server/db');
 const { createApp } = require('../../server/app');
 
-const DB = {
-  host: process.env.TEST_DB_HOST || '127.0.0.1',
-  port: Number(process.env.TEST_DB_PORT || 3307),
-  user: process.env.TEST_DB_USER || 'mx',
-  password: process.env.TEST_DB_PASSWORD || 'mx-test-pw',
-};
+const ADMIN_URL = process.env.TEST_PG_ADMIN_URL || 'postgresql://postgres:pg-test-admin@127.0.0.1:5433/postgres';
+async function admin(fn) {
+  const c = new Client({ connectionString: ADMIN_URL });
+  await c.connect();
+  try { return await fn(c); } finally { await c.end(); }
+}
 
 // Stand-in for api.anthropic.com: records each request and answers with whatever the test queued
 function fakeAnthropic() {
@@ -35,10 +36,15 @@ function fakeAnthropic() {
 }
 
 async function start(opts = {}) {
-  const dbName = 'mx_test_' + crypto.randomBytes(4).toString('hex');
-  const admin = await mysql.createConnection({ ...DB });
-  await admin.query('CREATE DATABASE `' + dbName + '` CHARACTER SET utf8mb4');
-  await admin.end();
+  const schema = 'mx_test_' + crypto.randomBytes(4).toString('hex');
+  const role = schema + '_app';
+  const rolePw = crypto.randomBytes(18).toString('base64url');
+  await admin(async (c) => {
+    await c.query(schemaSql(schema, role));
+    await c.query('alter role ' + role + " password '" + rolePw + "'");
+  });
+  const u = new URL(ADMIN_URL);
+  u.username = role; u.password = rolePw;
   const ai = await fakeAnthropic();
   const host = opts.host || '127.0.0.1';
   // Find a free port first, so APP_ORIGIN can name it
@@ -47,7 +53,7 @@ async function start(opts = {}) {
     APP_ENV: opts.appEnv || 'qa',
     APP_ORIGIN: 'http://' + (host === '127.0.0.1' && opts.localhost ? 'localhost' : host) + ':' + port,
     TRUST_PROXY: 'false',
-    DB_HOST: DB.host, DB_PORT: String(DB.port), DB_USER: DB.user, DB_PASSWORD: DB.password, DB_NAME: dbName,
+    DATABASE_URL: u.toString(), DB_SCHEMA: schema, DB_ROLE: role,
     DATA_KEY: crypto.randomBytes(32).toString('base64'),
     SETUP_TOKEN: opts.setupToken === undefined ? 'test-setup-token-0123456789abcdefghij' : opts.setupToken,
     ANTHROPIC_API_KEY: opts.aiKey === undefined ? 'sk-ant-test-key' : opts.aiKey,
@@ -58,12 +64,12 @@ async function start(opts = {}) {
   const app = createApp(cfg, pool);
   const server = await new Promise(res => { const s = app.listen(port, host, () => res(s)); });
   return {
-    cfg, pool, ai, app, server, origin: cfg.origin, dbName,
+    cfg, pool, ai, app, server, origin: cfg.origin, schema, role, admin,
     async stop() {
       await new Promise(r => server.close(r));
       ai.server.close();
       await pool.end();
-      if (!process.env.KEEP_TEST_DB) { const c = await mysql.createConnection({ ...DB }); await c.query('DROP DATABASE `' + dbName + '`'); await c.end(); }
+      if (!process.env.KEEP_TEST_DB) await admin(async (c) => { await c.query('drop schema ' + schema + ' cascade'); await c.query('drop owned by ' + role); await c.query('drop role ' + role); });
     },
   };
 }
@@ -100,4 +106,4 @@ function client(origin) {
   return c;
 }
 
-module.exports = { start, client, DB };
+module.exports = { start, client, admin, ADMIN_URL };

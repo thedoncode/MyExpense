@@ -8,6 +8,26 @@ const { rekey } = require('./server/rekey');
 const { recoverAdmin } = require('./server/admin');
 
 const PORT = Number(process.env.PORT) || 3000;
+
+// What to tell the person setting up, for each way the database connection fails (never the URL or password)
+function dbProblem(e) {
+  const code = String(e.code || '');
+  const why = {
+    '28P01': 'the database password in DATABASE_URL isn’t right',
+    '28000': 'the database login in DATABASE_URL isn’t allowed in. For Supabase’s pooler it looks like myexpense_app.<project ref>',
+    '3D000': 'the database name at the end of DATABASE_URL doesn’t exist (on Supabase it’s postgres)',
+    ENOTFOUND: 'the database address in DATABASE_URL can’t be found. On Supabase, copy the Session pooler connection string',
+    ECONNREFUSED: 'nothing answered at the database address and port in DATABASE_URL',
+    ETIMEDOUT: 'the database didn’t answer in time. Check the address and port, and that the hosting allows outgoing database connections',
+    SELF_SIGNED_CERT_IN_CHAIN: 'the database’s certificate couldn’t be checked. Add DB_SSL_CA with the certificate from Supabase (Database settings → SSL configuration)',
+    UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'the database’s certificate couldn’t be checked. Add DB_SSL_CA with the certificate from Supabase (Database settings → SSL configuration)',
+    ERR_TLS_CERT_ALTNAME_INVALID: 'the database’s certificate doesn’t match its address. Use the host name from Supabase’s connection string',
+    SCHEMA_MISSING: 'the MyExpense tables aren’t set up in the database yet. Run server/schema.sql for this environment (node server/tools.js sql ' + (process.env.APP_ENV || 'prod') + ') in Supabase’s SQL editor',
+    SCHEMA_NEWER: 'the database was set up by a newer version of MyExpense. Deploy the latest version',
+    '42501': 'the database login doesn’t have access to the MyExpense tables. Run server/schema.sql for this environment again',
+  }[code];
+  return 'MyExpense can’t open its database (' + (code || 'error') + '): ' + (why || 'check DATABASE_URL') + '.';
+}
 const listen = (app) => new Promise((res, rej) => { const s = app.listen(PORT, () => res(s)); s.on('error', rej); });
 const close = (s) => new Promise(res => s.close(() => res()));
 
@@ -30,7 +50,7 @@ const close = (s) => new Promise(res => s.close(() => res()));
     catch (e) {
       const code = e.code || 'error';
       console.error('Could not open the database (' + code + '): ' + e.message);
-      if (!help) help = await listen(helpApp('MyExpense can’t open its database (' + code + '). Check DB_NAME, DB_USER and DB_PASSWORD, and that the database user is assigned to the database. Use DB_HOST 127.0.0.1, not localhost.'));
+      if (!help) help = await listen(helpApp(dbProblem(e)));
       await new Promise(r => setTimeout(r, 15000));
     }
   }

@@ -261,7 +261,7 @@ const nextWindow = () => new Promise(r => setTimeout(r, 30000 - (Date.now() % 30
     console.log('G: a session that ends on the server ends on screen');
     {
       const { page } = alex;
-      await H.pool.query("UPDATE sessions s JOIN users u ON u.id = s.user_id SET s.last_seen_at = ? WHERE u.email = 'alex@example.com'", [Date.now() - 31 * 60000]);
+      await H.pool.query("UPDATE sessions SET last_seen_at = ? WHERE user_id = (SELECT id FROM users WHERE email = 'alex@example.com')", [Date.now() - 31 * 60000]);
       await page.click('.rcard');
       await page.fill('#it-cust', 'Alex itemized Contoso (edited)');
       await page.waitForSelector('text=Your session ended. Sign in again to keep going.', { timeout: 10000 });

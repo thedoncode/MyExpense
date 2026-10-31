@@ -81,7 +81,7 @@ function authRoutes(app, ctx) {
     if (!userId) return false;
     const now = Date.now();
     await pool.query(
-      'UPDATE users SET locked_until = IF(failed_logins + 1 >= ?, ?, locked_until), failed_logins = IF(failed_logins + 1 >= ?, 0, failed_logins + 1) WHERE id = ?',
+      'UPDATE users SET locked_until = CASE WHEN failed_logins + 1 >= ? THEN ? ELSE locked_until END, failed_logins = CASE WHEN failed_logins + 1 >= ? THEN 0 ELSE failed_logins + 1 END WHERE id = ?',
       [LOCK_AFTER, now + LOCK_MS, LOCK_AFTER, userId]);
     const [[u]] = await pool.query('SELECT locked_until FROM users WHERE id = ?', [userId]);
     if (u && Number(u.locked_until) > now) {
@@ -120,15 +120,12 @@ function authRoutes(app, ctx) {
     if (pwProblem) return res.status(400).json({ code: 'weak_password', message: pwProblem });
     const hash = await K.hashPassword(password);
     const made = await tx(pool, async (c) => {
-      const [[lock]] = await c.query("SELECT GET_LOCK('myexpense_setup', 10) AS ok");
-      try {
-        if (!lock.ok) return null;
-        const [[n]] = await c.query('SELECT COUNT(*) AS n FROM users');
-        if (n.n > 0) return null;
-        const [r] = await c.query("INSERT INTO users (email, name, role, pw_hash, created_at) VALUES (?, ?, 'admin', ?, ?)", [email, name, hash, Date.now()]);
-        await startSession(c, res, req, r.insertId, 'enroll');
-        return r.insertId;
-      } finally { await c.query("SELECT RELEASE_LOCK('myexpense_setup')"); }
+      await c.query("SELECT pg_advisory_xact_lock(hashtext('myexpense_setup'))"); // one setup at a time
+      const [[n]] = await c.query('SELECT COUNT(*) AS n FROM users');
+      if (n.n > 0) return null;
+      const [r] = await c.query("INSERT INTO users (email, name, role, pw_hash, created_at) VALUES (?, ?, 'admin', ?, ?) RETURNING id", [email, name, hash, Date.now()]);
+      await startSession(c, res, req, r.insertId, 'enroll');
+      return r.insertId;
     });
     if (!made) return res.status(409).json({ code: 'setup_done' });
     audit(req, 'setup', { actor: made, subject: made });
@@ -263,7 +260,7 @@ function authRoutes(app, ctx) {
       if (l.kind === 'invite') {
         const [[dupe]] = await c.query('SELECT id FROM users WHERE email = ?', [l.email]);
         if (dupe) return { err: 'account_exists' };
-        const [r] = await c.query('INSERT INTO users (email, name, role, pw_hash, created_at) VALUES (?, ?, ?, ?, ?)', [l.email, name, l.role, hash, Date.now()]);
+        const [r] = await c.query('INSERT INTO users (email, name, role, pw_hash, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id', [l.email, name, l.role, hash, Date.now()]);
         uid = r.insertId;
       } else {
         uid = l.user_id;

@@ -50,7 +50,7 @@ function dataRoutes(app, ctx) {
       const [[cur]] = await c.query('SELECT bytes FROM reports WHERE user_id = ? AND id = ? FOR UPDATE', [uid, id]);
       if (!cur) { const [[n]] = await c.query('SELECT COUNT(*) AS n FROM reports WHERE user_id = ?', [uid]); if (n.n >= MAX_REPORTS) return 'quota'; }
       if (await used(c, uid) - (cur ? cur.bytes : 0) + sealed.length > cfg.quotaBytes) return 'quota';
-      await c.query('INSERT INTO reports (user_id, id, body, bytes, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE body = VALUES(body), bytes = VALUES(bytes), updated_at = VALUES(updated_at)',
+      await c.query('INSERT INTO reports (user_id, id, body, bytes, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (user_id, id) DO UPDATE SET body = EXCLUDED.body, bytes = EXCLUDED.bytes, updated_at = EXCLUDED.updated_at',
         [uid, id, sealed, sealed.length, Date.now()]);
       return null;
     });
@@ -96,7 +96,7 @@ function dataRoutes(app, ctx) {
       if (!cur) { const [[n]] = await c.query('SELECT COUNT(*) AS n FROM receipts WHERE user_id = ?', [uid]); if (n.n >= MAX_RECEIPTS) return 'quota'; }
       if (await used(c, uid) - (cur ? cur.bytes : 0) + buf.length > cfg.quotaBytes) return 'quota';
       const meta = keys.sealJSON({ w, h, size: buf.length, osize: 0, otype: null, oname: null }, 'receipt-meta:' + uid + ':' + rid);
-      await c.query('INSERT INTO receipts (user_id, id, meta, img_parts, orig_parts, bytes, created_at) VALUES (?, ?, ?, 0, 0, ?, ?) ON DUPLICATE KEY UPDATE meta = VALUES(meta), img_parts = 0, orig_parts = 0, bytes = VALUES(bytes)',
+      await c.query('INSERT INTO receipts (user_id, id, meta, img_parts, orig_parts, bytes, created_at) VALUES (?, ?, ?, 0, 0, ?, ?) ON CONFLICT (user_id, id) DO UPDATE SET meta = EXCLUDED.meta, img_parts = 0, orig_parts = 0, bytes = EXCLUDED.bytes',
         [uid, rid, meta, buf.length, Date.now()]);
       await c.query('DELETE FROM receipt_parts WHERE user_id = ? AND receipt_id = ?', [uid, rid]);
       const n = await putParts(c, uid, rid, IMG, buf);
@@ -157,7 +157,7 @@ function dataRoutes(app, ctx) {
     const r = await receiptRow(pool, uid, rid);
     if (!r) return res.status(404).json({ code: 'not_found' });
     const day = new Date().toISOString().slice(0, 10);
-    await pool.query('INSERT INTO ai_usage (user_id, day, n) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE n = n + 1', [uid, day]);
+    await pool.query('INSERT INTO ai_usage (user_id, day, n) VALUES (?, ?, 1) ON CONFLICT (user_id, day) DO UPDATE SET n = ai_usage.n + 1', [uid, day]);
     const [[u]] = await pool.query('SELECT n FROM ai_usage WHERE user_id = ? AND day = ?', [uid, day]);
     if (u.n > cfg.ai.dailyLimit) return res.status(429).json({ code: 'ai_limit' });
     // The person's own date (their time zone), if it's within a day of the server's
@@ -184,7 +184,7 @@ function dataRoutes(app, ctx) {
   app.put('/api/settings', full, json, async (req, res) => {
     const uid = req.user.id;
     const body = keys.sealJSON(core.cleanSettings(req.body), 'settings:' + uid);
-    await pool.query('INSERT INTO settings (user_id, body) VALUES (?, ?) ON DUPLICATE KEY UPDATE body = VALUES(body)', [uid, body]);
+    await pool.query('INSERT INTO settings (user_id, body) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET body = EXCLUDED.body', [uid, body]);
     res.status(204).end();
   });
 

@@ -1,156 +1,90 @@
-// MySQL / MariaDB connection and schema. The schema is created and upgraded automatically on start.
-// Every table holding someone's data is keyed by user_id, and the code only ever queries it with the
-// signed-in person's id. Reports, receipts, settings and two-step secrets are stored encrypted.
-const mysql = require('mysql2/promise');
+// Postgres (Supabase) connection. The tables live in the environment's own schema (server/schema.sql),
+// which the server's login can read and write but not change. Every table holding someone's data is
+// keyed by user_id, and the code only ever queries it with the signed-in person's id. Reports,
+// receipts, details and two-step secrets are encrypted before they get here.
+const fs = require('fs');
+const path = require('path');
+const { Pool, types } = require('pg');
 
-const MIGRATIONS = [
-  // 1: initial schema
-  [
-    `CREATE TABLE IF NOT EXISTS users (
-      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      email VARCHAR(254) NOT NULL,
-      name VARCHAR(80) NOT NULL DEFAULT '',
-      role ENUM('user','admin') NOT NULL DEFAULT 'user',
-      status ENUM('active','disabled') NOT NULL DEFAULT 'active',
-      pw_hash VARCHAR(200) NULL,
-      totp_secret VARBINARY(200) NULL,
-      totp_last_step BIGINT NOT NULL DEFAULT 0,
-      failed_logins INT NOT NULL DEFAULT 0,
-      locked_until BIGINT NOT NULL DEFAULT 0,
-      created_at BIGINT NOT NULL,
-      last_login_at BIGINT NULL,
-      UNIQUE KEY uq_users_email (email)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
-    `CREATE TABLE IF NOT EXISTS recovery_codes (
-      user_id INT UNSIGNED NOT NULL,
-      code_hash BINARY(32) NOT NULL,
-      PRIMARY KEY (user_id, code_hash),
-      CONSTRAINT fk_rc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB`,
-    `CREATE TABLE IF NOT EXISTS sessions (
-      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      token_hash BINARY(32) NOT NULL,
-      user_id INT UNSIGNED NOT NULL,
-      stage ENUM('totp','enroll','full') NOT NULL,
-      pending_secret VARBINARY(200) NULL,
-      created_at BIGINT NOT NULL,
-      last_seen_at BIGINT NOT NULL,
-      expires_at BIGINT NOT NULL,
-      ip VARCHAR(45) NOT NULL DEFAULT '',
-      user_agent VARCHAR(200) NOT NULL DEFAULT '',
-      UNIQUE KEY uq_sessions_token (token_hash),
-      KEY k_sessions_user (user_id),
-      CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB`,
-    `CREATE TABLE IF NOT EXISTS links (
-      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      kind ENUM('invite','reset') NOT NULL,
-      token_hash BINARY(32) NOT NULL,
-      email VARCHAR(254) NOT NULL,
-      role ENUM('user','admin') NOT NULL DEFAULT 'user',
-      user_id INT UNSIGNED NULL,
-      created_by INT UNSIGNED NULL,
-      created_at BIGINT NOT NULL,
-      expires_at BIGINT NOT NULL,
-      used_at BIGINT NULL,
-      UNIQUE KEY uq_links_token (token_hash),
-      CONSTRAINT fk_links_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
-    `CREATE TABLE IF NOT EXISTS reports (
-      user_id INT UNSIGNED NOT NULL,
-      id VARCHAR(64) NOT NULL,
-      body MEDIUMBLOB NOT NULL,
-      bytes INT UNSIGNED NOT NULL,
-      updated_at BIGINT NOT NULL,
-      PRIMARY KEY (user_id, id),
-      CONSTRAINT fk_reports_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin`,
-    `CREATE TABLE IF NOT EXISTS receipts (
-      user_id INT UNSIGNED NOT NULL,
-      id VARCHAR(64) NOT NULL,
-      meta VARBINARY(1024) NOT NULL,
-      img_parts INT UNSIGNED NOT NULL DEFAULT 0,
-      orig_parts INT UNSIGNED NOT NULL DEFAULT 0,
-      bytes INT UNSIGNED NOT NULL DEFAULT 0,
-      created_at BIGINT NOT NULL,
-      PRIMARY KEY (user_id, id),
-      CONSTRAINT fk_receipts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin`,
-    `CREATE TABLE IF NOT EXISTS receipt_parts (
-      user_id INT UNSIGNED NOT NULL,
-      receipt_id VARCHAR(64) NOT NULL,
-      kind TINYINT UNSIGNED NOT NULL,
-      seq INT UNSIGNED NOT NULL,
-      body MEDIUMBLOB NOT NULL,
-      PRIMARY KEY (user_id, receipt_id, kind, seq),
-      CONSTRAINT fk_parts_receipt FOREIGN KEY (user_id, receipt_id) REFERENCES receipts(user_id, id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=ascii COLLATE=ascii_bin`,
-    `CREATE TABLE IF NOT EXISTS settings (
-      user_id INT UNSIGNED NOT NULL PRIMARY KEY,
-      body BLOB NOT NULL,
-      CONSTRAINT fk_settings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB`,
-    `CREATE TABLE IF NOT EXISTS ai_usage (
-      user_id INT UNSIGNED NOT NULL,
-      day CHAR(10) NOT NULL,
-      n INT UNSIGNED NOT NULL DEFAULT 0,
-      PRIMARY KEY (user_id, day),
-      CONSTRAINT fk_ai_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB`,
-    // The audit log has no foreign keys, so it outlives the accounts it mentions. It never holds
-    // anyone's expenses.
-    `CREATE TABLE IF NOT EXISTS audit (
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      at BIGINT NOT NULL,
-      actor_id INT UNSIGNED NULL,
-      subject_id INT UNSIGNED NULL,
-      event VARCHAR(40) NOT NULL,
-      ip VARCHAR(45) NOT NULL DEFAULT '',
-      detail VARCHAR(255) NOT NULL DEFAULT '',
-      KEY k_audit_at (at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
-  ],
-];
+// Counts, sums and millisecond timestamps come back as numbers (all well under 2^53)
+types.setTypeParser(20, (v) => Number(v));   // int8
+types.setTypeParser(1700, (v) => Number(v)); // numeric
 
-async function connect(cfg) {
-  const pool = mysql.createPool({
-    host: cfg.host, port: cfg.port, user: cfg.user, password: cfg.password, database: cfg.database,
-    connectionLimit: cfg.connectionLimit, waitForConnections: true, queueLimit: 200,
-    charset: 'utf8mb4', timezone: 'Z', multipleStatements: false, supportBigNumbers: true, bigNumberStrings: false,
-    enableKeepAlive: true,
-  });
-  await migrate(pool);
-  return pool;
+const SCHEMA_VERSION = 1;
+const SCHEMA_SQL = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+const IDENT = /^[a-z_][a-z0-9_]{0,62}$/;
+function schemaSql(schema, role) {
+  if (!IDENT.test(schema) || !IDENT.test(role)) throw new Error('schema and role names must be lowercase letters, digits and _');
+  return SCHEMA_SQL.split('__SCHEMA__').join(schema).split('__ROLE__').join(role);
 }
 
-async function migrate(pool) {
-  const c = await pool.getConnection();
+// Queries keep MySQL-style ? placeholders in the code (none of the SQL here has a literal ?), and
+// results come back as [rows], with affectedRows and insertId on the array, as the code expects.
+const toPg = (sql) => { let n = 0; return sql.replace(/\?/g, () => '$' + (++n)); };
+function wrap(q) {
+  return {
+    async query(sql, params) {
+      const res = await q.query(toPg(sql), params || []);
+      const rows = res.rows || [];
+      rows.affectedRows = res.rowCount || 0;
+      rows.insertId = rows[0] && rows[0].id;
+      return [rows];
+    },
+  };
+}
+
+async function connect(cfg) {
+  const pool = new Pool({
+    connectionString: cfg.url,
+    ssl: cfg.ssl,
+    max: cfg.connectionLimit,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 15000,
+    application_name: 'myexpense',
+  });
+  pool.on('error', (e) => console.error('database connection dropped: ' + (e.code || e.message)));
+  // Each connection works in the environment's schema only
+  pool.on('connect', (client) => { client.query('set search_path to ' + cfg.schema).catch(() => {}); });
+  const db = wrap(pool);
+  db.pool = pool;
+  db.end = () => pool.end();
+  db.getConnection = async () => { const c = await pool.connect(); const w = wrap(c); w.release = () => c.release(); w.raw = c; return w; };
+  db.schema = cfg.schema;
+  await checkSchema(db, cfg);
+  return db;
+}
+
+// The tables are created once, by someone allowed to (server/schema.sql, applied with Supabase's SQL
+// editor or connector). The server's own login can't create tables, so it only checks the version.
+// For local testing, DB_AUTO_MIGRATE=1 lets a login that owns the database create them itself.
+async function checkSchema(db, cfg) {
+  const c = await db.getConnection();
   try {
-    const [[lock]] = await c.query("SELECT GET_LOCK('myexpense_migrate', 60) AS ok");
-    if (!lock.ok) throw new Error('Could not lock the database to upgrade it');
-    try {
-      await c.query('CREATE TABLE IF NOT EXISTS schema_version (version INT NOT NULL PRIMARY KEY, applied_at BIGINT NOT NULL) ENGINE=InnoDB');
-      const [rows] = await c.query('SELECT MAX(version) AS v FROM schema_version');
-      const have = rows[0].v || 0;
-      if (have > MIGRATIONS.length) throw new Error('The database is newer than this version of MyExpense (schema ' + have + ')');
-      for (let v = have + 1; v <= MIGRATIONS.length; v++) {
-        for (const sql of MIGRATIONS[v - 1]) await c.query(sql);
-        await c.query('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)', [v, Date.now()]);
-      }
-    } finally { await c.query("SELECT RELEASE_LOCK('myexpense_migrate')"); }
+    await c.query('set search_path to ' + cfg.schema);
+    const [[t]] = await c.query("select to_regclass(?) as t", [cfg.schema + '.schema_version']);
+    let have = 0;
+    if (t && t.t) { const [[v]] = await c.query('select max(version) as v from schema_version'); have = (v && v.v) || 0; }
+    if (have < SCHEMA_VERSION && cfg.autoMigrate) {
+      await c.raw.query('begin');
+      try { await c.raw.query('select pg_advisory_xact_lock(hashtext(\'myexpense_migrate\'))'); await c.raw.query(schemaSql(cfg.schema, cfg.role)); await c.raw.query('commit'); }
+      catch (e) { await c.raw.query('rollback').catch(() => {}); throw e; }
+      have = SCHEMA_VERSION;
+    }
+    if (have > SCHEMA_VERSION) throw Object.assign(new Error('The database is newer than this version of MyExpense (schema ' + have + ').'), { code: 'SCHEMA_NEWER' });
+    if (have < SCHEMA_VERSION) throw Object.assign(new Error('The database tables aren’t set up yet. Apply server/schema.sql for this environment (node server/tools.js sql ' + (cfg.envName || 'prod') + ').'), { code: 'SCHEMA_MISSING' });
   } finally { c.release(); }
 }
 
 // Runs fn(conn) in a transaction
-async function tx(pool, fn) {
-  const c = await pool.getConnection();
+async function tx(db, fn) {
+  const c = await db.getConnection();
   try {
-    await c.beginTransaction();
+    await c.raw.query('begin');
     const out = await fn(c);
-    await c.commit();
+    await c.raw.query('commit');
     return out;
-  } catch (e) { try { await c.rollback(); } catch (_) { /* ignore */ } throw e; }
+  } catch (e) { try { await c.raw.query('rollback'); } catch (_) { /* ignore */ } throw e; }
   finally { c.release(); }
 }
 
-module.exports = { connect, migrate, tx, SCHEMA_VERSION: MIGRATIONS.length };
+module.exports = { connect, tx, schemaSql, SCHEMA_VERSION };
