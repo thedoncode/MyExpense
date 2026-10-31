@@ -131,7 +131,7 @@ window.MyExpensePlatform = {
   },
 
   aiAvailable() { return W.ai; },
-  readReceipt(svc, { imageId, today }) { return api('POST', '/api/receipts/' + encodeURIComponent(imageId) + '/read', { today }); },
+  readReceipt(svc, { imageId, today, kind }) { return api('POST', '/api/receipts/' + encodeURIComponent(imageId) + '/read', { today, kind: kind === 'statement' ? 'statement' : 'receipt' }); },
   aiFailed(svc, e) { if (e && e.code === 'ai_off') { W.ai = false; return true; } return false; },
 
   classify(e) {

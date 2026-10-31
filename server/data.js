@@ -163,11 +163,12 @@ function dataRoutes(app, ctx) {
     // The person's own date (their time zone), if it's within a day of the server's
     let today = req.body && req.body.today;
     if (!core.isISO(today) || Math.abs(core.daysBetween(today, day)) > 1) today = day;
-    const pdf = r.orig_parts ? await getParts(uid, rid, ORIG, r.orig_parts) : null;
+    const kind = req.body && req.body.kind === 'statement' ? 'statement' : 'receipt';
+    const pdf = r.orig_parts && kind === 'receipt' ? await getParts(uid, rid, ORIG, r.orig_parts) : null;
     const image = pdf ? null : await getParts(uid, rid, IMG, r.img_parts);
     if (!pdf && !image) return res.status(404).json({ code: 'not_found' });
     try {
-      res.json(await readReceipt(cfg.ai, { pdf, image, today }));
+      res.json(await readReceipt(cfg.ai, { pdf, image, today, kind }));
     } catch (e) {
       console.error('receipt reading failed: ' + (e.code || '') + ' ' + (e.status || ''));
       res.status(e.code === 'rate_limited' ? 429 : e.code === 'image_rejected' ? 422 : 502).json({ code: e.code || 'ai_error' });

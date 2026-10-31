@@ -147,7 +147,7 @@ const nextWindow = () => new Promise(r => setTimeout(r, 30000 - (Date.now() % 30
       const text = await page.innerText('body');
       check(/Uber/.test(text) && /Budget/.test(text), 'both receipts were read');
       const calls = H.ai.calls.map(c => c.body.messages[0].content[0].type);
-      check(calls.join() === 'image,document', 'the photo went to Claude as an image and the PDF as the original document: ' + calls.join());
+      check(calls.slice(0, 2).join() === 'image,document', 'the photo went to Claude as an image and the PDF as the original document: ' + calls.join());
       await page.click('.charge-row >> nth=0');
       const id = await page.$eval('.charge-edit input[type=date]', e => e.id);
       await page.fill('#' + id.replace(/-date$/, '') + '-cad', '36.93');
@@ -171,6 +171,19 @@ const nextWindow = () => new Promise(r => setTimeout(r, 30000 - (Date.now() % 30
       check(names.length === 2 && names.some(n => n.endsWith('.pdf')), 'receipt zip has the photo and the original PDF: ' + names.join(', '));
       const xlsx = await JSZip.loadAsync(fs.readFileSync(files[0]));
       check(!!xlsx.file('xl/worksheets/sheet1.xml'), 'the Excel file opens');
+      await page.click('[aria-label="Close"]');
+      // The card statement: read by Claude, then downloaded as its own PDF
+      H.ai.replies.push({ text: '{"kind":"statement","card":"Visa 4412","rows":[{"date":"2026-04-29","description":"UBER *TRIP","amount":36.93,"currency":"CAD","credit":false,"foreign":{"amount":26.85,"currency":"USD"},"category":"taxi","marked":true},{"date":"2026-05-01","description":"STARBUCKS","amount":6.45,"currency":"CAD","credit":false,"foreign":null,"category":"meal","marked":false}]}' });
+      await page.setInputFiles('#st-up', path.join(FIX, 'statement.png'));
+      await page.waitForFunction(() => document.querySelectorAll('.stmt-row').length > 0 && !/Reading statement|Adding page/.test(document.body.innerText), null, { timeout: 30000 });
+      const st = await page.$$eval('.stmt-row', els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
+      check(st.length === 1 && /UBER \*TRIP/.test(st[0]) && /On the report: Taxi \/ Uber/.test(st[0]), 'the statement page is read, and its marked Uber charge matches the report’s: ' + JSON.stringify(st));
+      check(H.ai.calls[H.ai.calls.length - 1].body.messages[0].content[1].text.startsWith('You are reading one page'), 'with the statement prompt');
+      await page.click('.dock >> text=Download');
+      const [sdl] = await Promise.all([page.waitForEvent('download'), page.click('text=Bank statement PDF')]);
+      const sp = path.join(OUT, 'C-' + sdl.suggestedFilename());
+      await sdl.saveAs(sp);
+      check(/Bank Statement\.pdf$/.test(sdl.suggestedFilename()) && fs.readFileSync(sp).subarray(0, 5).toString() === '%PDF-', 'the statement downloads as its own PDF: ' + sdl.suggestedFilename());
       await page.click('[aria-label="Close"]');
       await page.click('[aria-label="Back to reports"]');
       await page.reload();
