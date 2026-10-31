@@ -2259,7 +2259,7 @@ async function downloadReceipt(c) {
 function newReport(type) {
   const base = { id: uid('r'), type, name: Model.settings.name || '', customer: '', createdAt: Date.now(), updatedAt: Date.now() };
   if (type === 'perdiem') return { ...base, start: '', end: '', partialMode: null, partialDays: [] };
-  return { ...base, manager: Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron', location: '', charges: [], statements: [] };
+  return { ...base, manager: Model.settings.manager || '', location: '', charges: [], statements: [] };
 }
 function isBlank(r) { return r.type === 'perdiem' ? !r.customer && !r.start && !r.end : !r.customer && !(r.charges || []).length && !(r.statements || []).length; }
 function reportStatus(r) {
@@ -2480,7 +2480,7 @@ function ItemizedEditor({ r }) {
         <div class="fields">
           <${Field} id="it-name" label="Employee full name"><${TextInput} id="it-name" value=${r.name} autocomplete="name" placeholder="First and last name" onValue=${v => { set({ name: v }); rememberName(v); }} /><//>
           <${Field} id="it-cust" label="Customer / trip" hint="Used in the file name"><${TextInput} id="it-cust" value=${r.customer} placeholder="e.g. WBD LA" onValue=${v => set({ customer: v })} /><//>
-          <${Field} id="it-mgr" label="Manager name"><${TextInput} id="it-mgr" value=${r.manager} placeholder="Manager" onValue=${v => { set({ manager: v }); }} /><//>
+          <${Field} id="it-mgr" label="Manager name"><${TextInput} id="it-mgr" value=${r.manager} placeholder="Manager’s first and last name" onValue=${v => { set({ manager: v }); }} /><//>
           <${Field} id="it-loc" label="Location (optional)" hint="Printed in the Location row on days with charges"><${TextInput} id="it-loc" value=${r.location} placeholder="e.g. Burbank, CA" onValue=${v => set({ location: v })} /><//>
         </div>
         <p class="muted small">Department: <b>Service</b> · Amounts are the Canadian dollars that posted to your card.</p>
@@ -2801,6 +2801,7 @@ function ExportSheet({ r, onClose }) {
   const warns = [], notes = [];
   let receipts = [];
   if (!isPd) {
+    if (!(r.manager || '').trim()) warns.push('No manager name yet, so the Manager Name box on the report will be blank.');
     const reading = r.charges.filter(c => c.ai === 'reading' || c.ai === 'processing').length;
     if (reading) warns.push(plural(reading, 'receipt') + ' still being read. Wait a moment so ' + (reading === 1 ? 'it lands' : 'they land') + ' on the report.');
     const unchecked = r.charges.filter(c => c.ai === 'read' && !c.checked && !C.chargeIssue(c)).length;
@@ -2885,7 +2886,7 @@ function ExportSheet({ r, onClose }) {
 
 function SettingsSheet({ onClose }) {
   const [name, setName] = useState(Model.settings.name || '');
-  const [mgr, setMgr] = useState(Model.settings.manager !== undefined ? Model.settings.manager : 'Nic Cameron');
+  const [mgr, setMgr] = useState(Model.settings.manager || '');
   const [wiping, setWiping] = useState(false);
   async function wipe() {
     const ok = await askConfirm({ title: 'Delete all your MyExpense data?', body: 'Every report, receipt photo and saved detail of yours is erased for good. Download anything you still need first.', yes: 'Delete everything', danger: true });
@@ -2908,7 +2909,7 @@ function SettingsSheet({ onClose }) {
       <div class="sheet-h"><h2>Your details</h2><button type="button" class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} n="x" /></button></div>
       <p class="muted small">New reports start with these. You can still change them on any report.</p>
       <${Field} id="set-name" label="Your full name"><${TextInput} id="set-name" value=${name} autocomplete="name" placeholder="First and last name" onValue=${setName} /><//>
-      <${Field} id="set-mgr" label="Manager name (itemized reports)"><${TextInput} id="set-mgr" value=${mgr} placeholder="Manager" onValue=${setMgr} /><//>
+      <${Field} id="set-mgr" label="Manager name (itemized reports)"><${TextInput} id="set-mgr" value=${mgr} placeholder="Manager’s first and last name" onValue=${setMgr} /><//>
       <button class="btn primary" type="submit">Save details</button>
       <div class="terms" style="display:grid;gap:4px">
         <b style="font-family:var(--f-body)">Your privacy</b>
