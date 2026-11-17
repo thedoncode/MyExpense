@@ -637,7 +637,7 @@ function PerDiemEditor({ r }) {
         </div>
         ${tooLong && html`<p class="small" style="color:var(--bad)">${problems.find(p => p.field === 'end').msg}</p>`}
         <div class="terms">
-          <span>Destination <b>United States</b></span><span>Currency <b>USD</b></span><span>Full day <b>$100</b></span><span>Partial day <b>$50</b></span><span>Department <b>Service</b></span>
+          <span>Destination <b>United States</b></span><span>Currency <b>USD</b></span><span>Full day <b>$100</b></span><span>Partial day <b>$50</b></span><span>Department <b>Customer Service</b></span>
         </div>
       </div>
     </section>
@@ -735,11 +735,11 @@ function ItemizedEditor({ r }) {
       <div class="panel-b">
         <div class="fields">
           <${Field} id="it-name" label="Employee full name"><${TextInput} id="it-name" value=${r.name} autocomplete="name" placeholder="First and last name" onValue=${v => { set({ name: v }); rememberName(v); }} /><//>
-          <${Field} id="it-cust" label="Customer / trip" hint="Used in the file name"><${TextInput} id="it-cust" value=${r.customer} placeholder="e.g. WBD LA" onValue=${v => set({ customer: v })} /><//>
+          <${Field} id="it-cust" label="Customer / trip" hint="Printed in the Customer row on days with charges, and used in the file name"><${TextInput} id="it-cust" value=${r.customer} placeholder="e.g. WBD LA" onValue=${v => set({ customer: v })} /><//>
           <${Field} id="it-mgr" label="Manager name"><${TextInput} id="it-mgr" value=${r.manager} placeholder="Manager’s first and last name" onValue=${v => { set({ manager: v }); }} /><//>
           <${Field} id="it-loc" label="Location (optional)" hint="Printed in the Location row on days with charges"><${TextInput} id="it-loc" value=${r.location} placeholder="e.g. Burbank, CA" onValue=${v => set({ location: v })} /><//>
         </div>
-        <p class="muted small">Department: <b>Service</b> · Amounts are the Canadian dollars that posted to your card.</p>
+        <p class="muted small">Department: <b>Customer Service</b> · Amounts are the Canadian dollars that posted to your card.</p>
       </div>
     </section>
 
