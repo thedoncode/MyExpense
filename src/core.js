@@ -32,7 +32,7 @@
 
   /* ---------------- per diem rules ---------------- */
   const PD = {
-    destination: 'United States', currency: 'USD', department: 'Service',
+    destination: 'United States', currency: 'USD', department: 'Customer Service',
     full: 100, partial: 50,
     fullDesc: 'Per Diam - Full Day', partialDesc: 'Per Diam - Partial Day',
     maxDays: 186,
@@ -173,16 +173,19 @@
   function colName(n) { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = COLS[m] + s; n = Math.floor((n - 1) / 26); } return s; }
   function splitRef(ref) { const m = /^([A-Z]+)(\d+)$/.exec(ref); return [m[1], Number(m[2])]; }
 
+  const IT_DEPARTMENT = 'Customer Service';
   function itemizedCells(r, week) {
     const V = {};
     const sun = sundayOf(week.weekEnding);
     V.N2 = { op: 'date', v: serial(week.weekEnding) };
     V.N3 = { op: 'str', v: r.name.trim() };
-    V.N4 = { op: 'str', v: 'Service' };
+    V.N4 = { op: 'str', v: IT_DEPARTMENT };
     V.N5 = (r.manager || '').trim() ? { op: 'str', v: r.manager.trim() } : { op: 'clear' };
     const daysWith = new Set(week.charges.map(c => dow(c.date)));
+    // Row 11 (Customer) and row 12 (Location) are filled on the days that have charges
     for (let i = 0; i < 7; i++) {
       V[DAYCOL[i] + '10'] = { op: 'date', v: serial(addDays(sun, i)) };
+      V[DAYCOL[i] + '11'] = (r.customer || '').trim() && daysWith.has(i) ? { op: 'str', v: r.customer.trim() } : { op: 'clear' };
       V[DAYCOL[i] + '12'] = (r.location || '').trim() && daysWith.has(i) ? { op: 'str', v: r.location.trim() } : { op: 'clear' };
     }
     const colTot = {};
@@ -209,7 +212,8 @@
     return V;
   }
 
-  const PD_FIRST = 15, PD_LAST = 29;
+  // Expense report sheet: day rows 15-42, column sums on 43, subtotal 44, advances 45, total 46
+  const PD_FIRST = 15, PD_LAST = 42, PD_SUMS = 43, PD_SUBTOTAL = 44, PD_TOTAL = 46;
   const PD_CATCOLS = ['G', 'H', 'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
   function perDiemCells(r, week) {
     const V = {};
@@ -243,11 +247,11 @@
       uSum += u;
       sums.L = (sums.L || 0) + u;
     }
-    for (const c of PD_CATCOLS.concat(['L'])) V[c + '30'] = { op: 'cache', v: c === 'L' ? sums.L : 0, soft: true };
-    V.U31 = { op: 'cache', v: uSum };
-    V.V31 = { op: 'cache', v: 0 };
-    V.W31 = { op: 'cache', v: uSum };
-    V.U33 = { op: 'cache', v: uSum };
+    for (const c of PD_CATCOLS.concat(['L'])) V[c + PD_SUMS] = { op: 'cache', v: c === 'L' ? sums.L : 0, soft: true };
+    V['U' + PD_SUBTOTAL] = { op: 'cache', v: uSum };
+    V['V' + PD_SUBTOTAL] = { op: 'cache', v: 0 };
+    V['W' + PD_SUBTOTAL] = { op: 'cache', v: uSum };
+    V['U' + PD_TOTAL] = { op: 'cache', v: uSum };
     return V;
   }
 

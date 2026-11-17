@@ -26,7 +26,7 @@ Unless the user explicitly supplies an approved variation, use:
 * Currency: `USD`
 * Full-day amount: `$100.00`, description `Per Diam - Full Day`
 * Partial-day amount: `$50.00`, description `Per Diam - Partial Day`
-* Department: `Service`
+* Department: `Customer Service`
 
 Do not infer partial days from arrival, departure, travel, or weekend patterns. Only dates explicitly named by the user are partial.
 
@@ -46,11 +46,11 @@ Keep the template’s header, totals, formulas, formatting, and blank-row behavi
 
 * `WEEK ENDING` to the week’s Saturday date.
 * `NAME` to the employee’s full name.
-* `DEPARTMENT` to `Service`.
+* `DEPARTMENT` to `Customer Service`.
 * `CUSTOMER TRIP` to the customer name.
 * `TRIP DESTINATION` to `United States`.
 
-Populate daily rows beginning at row 15:
+Populate daily rows 15–42 (one row per trip day; a week uses at most seven):
 
 * Column C: calendar date for each trip day in the worksheet’s covered range.
 * Column D: exactly `Per Diam - Full Day` or `Per Diam - Partial Day`.
@@ -68,10 +68,10 @@ For unused daily rows, retain the template’s blank-row formulas and leave date
 
 Do not remove or redesign template calculations. Preserve:
 
-* Column-sum row 30.
-* The `Subtotal` block with `=SUM(U15:U29)`.
-* `Advances`.
-* The `Total` calculation as `=(Subtotal-Advances)`.
+* Column-sum row 43.
+* The `Subtotal` block on row 44 with `=SUM(U15:U42)`.
+* `Advances` on row 45.
+* The `Total` calculation on row 46 as `=(Subtotal-Advances)`.
 * The three reference tabs: `Per Diem (USD$)`, `Per Diem (Mixed Currency)`, and `Expense Descriptions`.
 * The `Internal-Use Per Diem` calculator and its `VLOOKUP` formulas, unchanged.
 
