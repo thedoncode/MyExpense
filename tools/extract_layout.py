@@ -151,11 +151,11 @@ def extract(path, sheet_name, sheet_file, rng, dynamic, mdw):
     }
 
 itemized = extract(
-    os.path.join(ROOT, 'templates', 'itemized-expense-claim.xlsx'), 'Week Ending 02-May-26', 'sheet1.xml', 'A1:Q40',
+    os.path.join(ROOT, 'templates', 'itemized-expense-claim.xlsx'), 'CLAIM FORM', 'sheet1.xml', 'A1:Q40',
     ['N2', 'N3', 'N4', 'N5', 'B10:O10', 'B11:O12', 'B14:Q31', 'B32:Q32', 'F34'], 9)
 perdiem = extract(
-    os.path.join(ROOT, 'templates', 'perdiem-travel-expense.xlsx'), 'Expense report', 'sheet1.xml', 'A1:W41',
-    ['N4', 'N5', 'N6', 'N7', 'N8', 'B15:W29', 'G30:T30', 'U31:W31', 'U33'], 7)
+    os.path.join(ROOT, 'templates', 'perdiem-travel-expense.xlsx'), 'Expense report', 'sheet1.xml', 'A1:W54',
+    ['N4', 'N5', 'N6', 'N7', 'N8', 'B15:W42', 'G43:T43', 'U44:W44', 'U46'], 7)
 out = {'itemized': itemized, 'perdiem': perdiem}
 s = json.dumps(out, separators=(',', ':'))
 open(os.path.join(ROOT, 'src', 'layouts.json'), 'w').write(s)

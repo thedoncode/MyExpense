@@ -17,7 +17,7 @@ If Name, Customer, or the charge source is missing, ask before generating.
 
 ## Fixed Assumptions (do not vary unless told otherwise)
 
-* **Department:** Service
+* **Department:** Customer Service
 * **Manager:** the manager name the user gives; ask if it's missing (there is no default)
 * **Location / currency:** use the currency shown on the bank statement (typically **CAD**). Record the CAD amount that actually posted to the card.
 * **Layout:** the Evertz "EXPENSE CLAIM REPORT" itemized template — never the per-diem layout.
@@ -57,9 +57,12 @@ The "EXPENSE CLAIM REPORT" per-week layout:
 **Header block**
 * `WEEK ENDING` = that week's Saturday date
 * `NAME` = the employee name
-* `DEPARTMENT` = Service
+* `DEPARTMENT` = Customer Service
 * `MANAGER NAME` = the manager name the user gave
 * Location = per template (Canada / CAD)
+
+**Customer row (row 11)**
+* Put the customer / trip name under each day that has a charge; leave the other days blank.
 
 **Date row (row 10)**
 * Fill a date in **every** day column, Sunday through Saturday — not just the Sunday cell.

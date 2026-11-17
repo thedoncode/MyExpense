@@ -18,7 +18,7 @@ There are two environments, **production** (`main` branch) and **QA** (`qa` bran
 
 **Per diem report** (Travel Expense Report form)
 - Employee name, customer, trip start and end dates.
-- Fixed terms: United States, USD, $100 full day (`Per Diam - Full Day`), $50 partial day (`Per Diam - Partial Day`), department Service.
+- Fixed terms: United States, USD, $100 full day (`Per Diam - Full Day`), $50 partial day (`Per Diam - Partial Day`), department Customer Service.
 - Partial days are only what the person marks; they must choose "None" or tap the days. Nothing is inferred from travel days or weekends.
 - Splits the trip into Sunday–Saturday weeks; the first sheet starts on the trip start, the last ends on the trip end. Sheets are named `Week Ending DD-Mon-YY`, followed by the three reference tabs.
 
