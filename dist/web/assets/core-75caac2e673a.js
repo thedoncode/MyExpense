@@ -603,14 +603,16 @@
     });
   }
 
+  // "{customer} - Per Diem - {week ending}" or "{customer} - Itemized Expenses - {week ending}",
+  // with the report's last week-ending date written as on its sheets (09-May-26)
   function fileBase(r) {
-    const cust = (r.customer || 'Trip').trim().replace(/[\\/:*?"<>|]+/g, '-');
+    const cust = ((r.customer || '').trim() || 'Trip').replace(/[\\/:*?"<>|]+/g, '-');
     if (r.type === 'perdiem') {
-      return cust + ' PD Expenses ' + fmtMonD(r.start) + '-' + fmtMonD(r.end) + ' ' + parts(r.end).y;
+      const end = r.end || r.start;
+      return cust + ' - Per Diem' + (end ? ' - ' + fmtDDMonYY(saturdayOf(end)) : '');
     }
     const s = itemizedSummary(r);
-    if (!s.first) return cust + ' Itemized Expenses';
-    return cust + ' Itemized Expenses ' + fmtMonD(s.first) + '-' + fmtMonD(s.last) + ' ' + parts(s.last).y;
+    return cust + ' - Itemized Expenses' + (s.last ? ' - ' + fmtDDMonYY(saturdayOf(s.last)) : '');
   }
 
   /* ---------------- number formats for the PDF ---------------- */
