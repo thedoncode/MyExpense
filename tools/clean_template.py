@@ -7,8 +7,10 @@ Removes what identifies the people and computers that edited it, and nothing els
   - values in the cells passed with --clear, such as a pre-filled person's name
   - shared strings no cell uses any more, so cleared text doesn't stay in the file
 
-Two optional fixes:
+Optional fixes:
   --date SHEET:CELL         gives a cell the app fills with a date the template's own date format
+  --bottom-border SHEET:RANGE  gives the cells a thin black bottom border (to close off a table),
+                            keeping the rest of each cell's style
   --delete-rows SHEET:A-B   removes rows A to B the way Excel's "Delete rows" does: everything below
                             moves up, and formulas, merged cells, conditional formatting, data
                             validation and the sheet's other ranges follow. Ranges that ran into the
@@ -17,7 +19,7 @@ Two optional fixes:
 Every other part is copied byte for byte, so layout, styles and formulas are otherwise unchanged.
 
   python3 tools/clean_template.py NEW.xlsx templates/itemized-expense-claim.xlsx --clear 1:N5 --date 1:N2
-  python3 tools/clean_template.py NEW.xlsx templates/perdiem-travel-expense.xlsx --delete-rows 1:22-42
+  python3 tools/clean_template.py NEW.xlsx templates/perdiem-travel-expense.xlsx --delete-rows 1:22-42 --bottom-border 1:B21:F21
 """
 import argparse, re, sys, zipfile
 
@@ -183,7 +185,7 @@ def delete_rows(parts, removed, sheet_no, first, last):
     removed.append('rows %d-%d of %s' % (first, last, name))
 
 
-def clean(src, dst, clears, dates=(), deletes=()):
+def clean(src, dst, clears, dates=(), deletes=(), bottoms=()):
     zin = zipfile.ZipFile(src)
     parts = {i.filename: zin.read(i.filename) for i in zin.infolist()}
     infos = {i.filename: i for i in zin.infolist()}
@@ -274,6 +276,55 @@ def clean(src, dst, clears, dates=(), deletes=()):
         st = st[:block.start()] + '<cellXfs count="%d">%s</cellXfs>' % (len(xfs), ''.join(xfs)) + st[block.end():]
         parts['xl/styles.xml'] = st.encode('utf-8')
 
+    # a thin black line under a range of cells (after any row removal, so the range is in final rows)
+    if bottoms:
+        st = text('xl/styles.xml')
+        bblock = re.search(r'<borders count="\d+">(.*?)</borders>', st, re.S)
+        borders = re.findall(r'<border\b[^>]*/>|<border\b[^>]*>.*?</border>', bblock.group(1), re.S)
+        xblock = re.search(r'<cellXfs count="\d+">(.*?)</cellXfs>', st, re.S)
+        xfs = re.findall(r'<xf\b[^>]*/>|<xf\b[^>]*>.*?</xf>', xblock.group(1), re.S)
+        made = {}
+        for spec in bottoms:
+            n, rng = spec.split(':', 1)
+            a, b = rng.split(':')
+            ca, ra = re.match(r'([A-Z]+)(\d+)$', a).groups()
+            cb, rb = re.match(r'([A-Z]+)(\d+)$', b).groups()
+            num = lambda c: sum((ord(ch) - 64) * 26 ** i for i, ch in enumerate(reversed(c)))
+            let = lambda k: (let((k - 1) // 26) if (k - 1) // 26 else '') + chr(65 + (k - 1) % 26)
+            p = 'xl/worksheets/sheet%s.xml' % n
+            sx = text(p)
+            for r in range(int(ra), int(rb) + 1):
+                for c in range(num(ca), num(cb) + 1):
+                    ref = let(c) + str(r)
+                    m = re.search(r'<c r="%s"([^>]*?)(/>|>)' % ref, sx)
+                    if not m:
+                        sys.exit('cell %s not found in %s' % (ref, p))
+                    sm = re.search(r'\ss="(\d+)"', m.group(1))
+                    old = int(sm.group(1)) if sm else 0
+                    if old not in made:
+                        xf = xfs[old]
+                        bm = re.search(r'borderId="(\d+)"', xf)
+                        bd = borders[int(bm.group(1)) if bm else 0]
+                        line = '<bottom style="thin"><color indexed="64"/></bottom>'
+                        if re.search(r'<bottom\b[^>]*/>|<bottom\b[^>]*>.*?</bottom>', bd, re.S):
+                            nb = re.sub(r'<bottom\b[^>]*/>|<bottom\b[^>]*>.*?</bottom>', line, bd, count=1, flags=re.S)
+                        elif bd.endswith('/>'):
+                            nb = bd[:-2] + '><left/><right/><top/>' + line + '<diagonal/></border>'
+                        else:
+                            nb = bd.replace('<diagonal', line + '<diagonal', 1) if '<diagonal' in bd else bd.replace('</border>', line + '</border>')
+                        borders.append(nb)
+                        nxf = re.sub(r'borderId="\d+"', 'borderId="%d"' % (len(borders) - 1), xf, count=1) if bm else xf.replace('<xf ', '<xf borderId="%d" ' % (len(borders) - 1), 1)
+                        nxf = nxf if 'applyBorder=' in nxf else nxf.replace('<xf ', '<xf applyBorder="1" ', 1)
+                        xfs.append(nxf)
+                        made[old] = len(xfs) - 1
+                    attrs = re.sub(r'\ss="\d+"', '', m.group(1)) + ' s="%d"' % made[old]
+                    sx = sx[:m.start()] + '<c r="%s"%s%s' % (ref, attrs, m.group(2)) + sx[m.end():]
+            parts[p] = sx.encode('utf-8')
+        st = st[:xblock.start()] + '<cellXfs count="%d">%s</cellXfs>' % (len(xfs), ''.join(xfs)) + st[xblock.end():]
+        bblock = re.search(r'<borders count="\d+">(.*?)</borders>', st, re.S)
+        st = st[:bblock.start()] + '<borders count="%d">%s</borders>' % (len(borders), ''.join(borders)) + st[bblock.end():]
+        parts['xl/styles.xml'] = st.encode('utf-8')
+
     # drop shared strings nothing uses, renumbering the rest
     if 'xl/sharedStrings.xml' in parts:
         sst = text('xl/sharedStrings.xml')
@@ -313,6 +364,7 @@ if __name__ == '__main__':
     ap.add_argument('--clear', action='append', default=[], metavar='SHEET:CELL', help='empty a cell, e.g. 1:N5 (sheet number as in xl/worksheets/sheetN.xml)')
     ap.add_argument('--date', action='append', default=[], metavar='SHEET:CELL', help='give a cell the template\'s d-mmm-yy date format, e.g. 1:N2')
     ap.add_argument('--delete-rows', action='append', default=[], metavar='SHEET:A-B', help='remove rows A to B, e.g. 1:22-42')
+    ap.add_argument('--bottom-border', action='append', default=[], metavar='SHEET:RANGE', help='thin black line under the cells, e.g. 1:B21:F21')
     a = ap.parse_args()
-    for r in clean(a.src, a.dst, a.clear, a.date, a.delete_rows):
+    for r in clean(a.src, a.dst, a.clear, a.date, a.delete_rows, a.bottom_border):
         print('removed', r)
