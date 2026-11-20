@@ -64,6 +64,37 @@ def col_widths_from_xml(path, sheet_file, ncols):
     margins = dict(re.findall(r'(left|right|top|bottom)="([\d.]+)"', re.search(r'<pageMargins[^>]*>', xml).group(0)))
     return widths[1:], dflt_h, {k: float(v) * 72 for k, v in margins.items()}
 
+def row_bands(path, sheet_file, pal):
+    """Conditional formatting that colours alternate rows (MOD(ROW(),2)=0 or =1), which Excel
+    applies on top of the cells' own fills: [(set of refs, parity, colour)], highest priority first."""
+    z = zipfile.ZipFile(path)
+    xml = z.read('xl/worksheets/' + sheet_file).decode('utf8')
+    styles = z.read('xl/styles.xml').decode('utf8')
+    m = re.search(r'<dxfs\b.*?</dxfs>', styles, re.S)
+    dxfs = re.findall(r'<dxf>(.*?)</dxf>', m.group(0), re.S) if m else []
+    def dxf_fill(i):
+        m = re.search(r'<bgColor ([^>]*)/>', dxfs[i]) if 0 <= i < len(dxfs) else None
+        if not m:
+            return None
+        a = dict(re.findall(r'(\w+)="([^"]*)"', m.group(1)))
+        if 'rgb' in a:
+            return a['rgb'][-6:].upper()
+        if 'theme' in a:
+            return apply_tint(pal[int(a['theme'])], float(a.get('tint', 0)))
+        return None
+    bands = []
+    for cf in re.finditer(r'<conditionalFormatting sqref="([^"]+)">(.*?)</conditionalFormatting>', xml, re.S):
+        refs = set()
+        for part in cf.group(1).split():
+            a, b, c, d = range_boundaries(part if ':' in part else part + ':' + part)
+            refs |= {get_column_letter(x) + str(y) for x in range(a, c + 1) for y in range(b, d + 1)}
+        for rule in re.finditer(r'<cfRule\b([^>]*)>\s*<formula>MOD\(ROW\(\),2\)=([01])</formula>', cf.group(2)):
+            a = dict(re.findall(r'(\w+)="([^"]*)"', rule.group(1)))
+            fill = dxf_fill(int(a.get('dxfId', -1)))
+            if fill:
+                bands.append((int(a.get('priority', 99)), refs, int(rule.group(2)), fill))
+    return [b[1:] for b in sorted(bands, key=lambda b: b[0])]
+
 def char_to_pt(w, mdw):
     # Excel column width is in units of the Normal font's max digit width (px @96dpi)
     if w <= 0:
@@ -78,6 +109,7 @@ def extract(path, sheet_name, sheet_file, rng, dynamic, mdw):
     ws, wsv = wb[sheet_name], wbv[sheet_name]
     c1, r1, c2, r2 = range_boundaries(rng)
     widths, dflt_h, margins = col_widths_from_xml(path, sheet_file, c2)
+    bands = row_bands(path, sheet_file, pal)
     cols = [char_to_pt(w, mdw) for w in widths[c1 - 1:c2]]
     rows = []
     for r in range(r1, r2 + 1):
@@ -101,6 +133,9 @@ def extract(path, sheet_name, sheet_file, rng, dynamic, mdw):
             fill = None
             if cell.fill is not None and cell.fill.fill_type == 'solid':
                 fill = color(cell.fill.fgColor, pal)
+            band = next((b for b in bands if ref in b[0] and r % 2 == b[1]), None)
+            if band:
+                fill = band[2]
             bd = cell.border
             def side(s):
                 if s is None or s.style is None:
@@ -154,8 +189,8 @@ itemized = extract(
     os.path.join(ROOT, 'templates', 'itemized-expense-claim.xlsx'), 'CLAIM FORM', 'sheet1.xml', 'A1:Q40',
     ['N2', 'N3', 'N4', 'N5', 'B10:O10', 'B11:O12', 'B14:Q31', 'B32:Q32', 'F34'], 9)
 perdiem = extract(
-    os.path.join(ROOT, 'templates', 'perdiem-travel-expense.xlsx'), 'Expense report', 'sheet1.xml', 'A1:W54',
-    ['N4', 'N5', 'N6', 'N7', 'N8', 'B15:W42', 'G43:T43', 'U44:W44', 'U46'], 7)
+    os.path.join(ROOT, 'templates', 'perdiem-travel-expense.xlsx'), 'Expense report', 'sheet1.xml', 'A1:W35',
+    ['N4', 'N5', 'N6', 'N7', 'N8', 'B15:W21', 'G22:T22', 'U23:W23', 'U25'], 7)
 out = {'itemized': itemized, 'perdiem': perdiem}
 s = json.dumps(out, separators=(',', ':'))
 open(os.path.join(ROOT, 'src', 'layouts.json'), 'w').write(s)
