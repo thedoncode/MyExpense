@@ -68,6 +68,15 @@ test('file names can’t carry paths or reserved characters', () => {
   const r = { type: 'perdiem', customer: '../../etc/passwd', start: '2026-06-15', end: '2026-06-20' };
   assert.ok(!/[\\/]/.test(C.fileBase(r)), C.fileBase(r));
 });
+test('files are named "{customer} - Per Diem / Itemized Expenses - {week ending}"', () => {
+  // the last week's Saturday, written as on the sheets
+  assert.strictEqual(C.fileBase({ type: 'perdiem', customer: ' WBD LA ', start: '2026-01-19', end: '2026-01-24' }), 'WBD LA - Per Diem - 24-Jan-26');
+  assert.strictEqual(C.fileBase({ type: 'perdiem', customer: 'WBD LA', start: '2026-06-15', end: '2026-07-08' }), 'WBD LA - Per Diem - 11-Jul-26');
+  const charge = (id, date) => ({ id, date, category: 'taxi', amount: 10, currency: 'CAD' });
+  assert.strictEqual(C.fileBase({ type: 'itemized', customer: 'WBD LA', charges: [charge('a', '2026-04-29'), charge('b', '2026-05-11')] }), 'WBD LA - Itemized Expenses - 16-May-26');
+  assert.strictEqual(C.fileBase({ type: 'itemized', customer: 'WBD LA', charges: [] }), 'WBD LA - Itemized Expenses');
+  assert.strictEqual(C.fileBase({ type: 'itemized', customer: '', charges: [charge('a', '2026-05-02')] }), 'Trip - Itemized Expenses - 02-May-26');
+});
 test('text that looks like a formula is written as plain text in Excel', async () => {
   const tpl = fs.readFileSync(path.join(__dirname, '..', 'templates', 'itemized-expense-claim.xlsx'));
   const r = { type: 'itemized', name: '=HYPERLINK("http://evil","x")', customer: '+cmd|calc', manager: '@SUM(1)', location: '-2+3',

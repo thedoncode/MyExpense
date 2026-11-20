@@ -369,7 +369,7 @@ async function exportStatementFiles(r) {
   if (!files.length) { toast('There are no statement pages on this report.'); return false; }
   const zip = new window.JSZip();
   for (const f of files) zip.file(f.name + '.' + f.ext, f.blob);
-  return saveFile(C.fileBase(r) + ' Bank Statement files.zip', await zip.generateAsync({ type: 'blob' }));
+  return saveFile(C.fileBase(r) + ' - Bank Statement files.zip', await zip.generateAsync({ type: 'blob' }));
 }
 async function downloadStatementPage(p, original) {
   if (original) {
@@ -406,9 +406,9 @@ async function exportStatementPdf(r) {
   const sub = [(r.customer || 'Untitled') + ' itemized expenses' + (s.first ? ' · ' + rangeText(s.first, s.last) : ''), 'Employee: ' + (r.name || '—')];
   if (cards.length) sub.push('Card: ' + cards.join(', '));
   const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter', compress: true });
-  doc.setProperties({ title: C.fileBase(r) + ' Bank Statement', author: r.name || '', creator: ENV.title });
+  doc.setProperties({ title: C.fileBase(r) + ' - Bank Statement', author: r.name || '', creator: ENV.title });
   C.pdfStatement(doc, { heading: (r.customer || '') + ' · ' + (r.name || '') + ' · bank statement', sub, items, missing, pages, fresh: true });
-  return saveFile(C.fileBase(r) + ' Bank Statement.pdf', doc.output('blob'));
+  return saveFile(C.fileBase(r) + ' - Bank Statement.pdf', doc.output('blob'));
 }
 
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -482,9 +482,9 @@ async function exportReceiptsPdf(r) {
   }
   if (!recs.length) { toast('There are no receipt photos on this report.'); return false; }
   const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter', compress: true });
-  doc.setProperties({ title: C.fileBase(r) + ' Receipts', author: r.name || '', creator: ENV.title });
+  doc.setProperties({ title: C.fileBase(r) + ' - Receipts', author: r.name || '', creator: ENV.title });
   C.pdfReceipts(doc, recs, (r.customer || '') + ' · ' + (r.name || '') + ' · receipts', true);
-  return saveFile(C.fileBase(r) + ' Receipts.pdf', doc.output('blob'));
+  return saveFile(C.fileBase(r) + ' - Receipts.pdf', doc.output('blob'));
 }
 function extFor(orig) { if (orig.type === 'application/pdf') return 'pdf'; const m = /\.([a-z0-9]{2,5})$/i.exec(orig.name || ''); return m ? m[1].toLowerCase() : 'bin'; }
 async function receiptFile(imageId) {
@@ -501,7 +501,7 @@ async function exportReceiptsZip(r) {
     if (f) { zip.file(x.name + '.' + f.ext, f.blob); n++; }
   }
   if (!n) { toast('There are no receipt photos on this report.'); return false; }
-  return saveFile(C.fileBase(r) + ' Receipts.zip', await zip.generateAsync({ type: 'blob', compression: 'STORE' }));
+  return saveFile(C.fileBase(r) + ' - Receipts.zip', await zip.generateAsync({ type: 'blob', compression: 'STORE' }));
 }
 async function downloadReceipt(c) {
   const f = await receiptFile(c.imageId);
