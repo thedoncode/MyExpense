@@ -50,7 +50,7 @@ Keep the template’s header, totals, formulas, formatting, and blank-row behavi
 * `CUSTOMER TRIP` to the customer name.
 * `TRIP DESTINATION` to `United States`.
 
-Populate daily rows 15–42 (one row per trip day; a week uses at most seven):
+Populate daily rows 15–21 (one row per trip day; a week has at most seven):
 
 * Column C: calendar date for each trip day in the worksheet’s covered range.
 * Column D: exactly `Per Diam - Full Day` or `Per Diam - Partial Day`.
@@ -68,10 +68,10 @@ For unused daily rows, retain the template’s blank-row formulas and leave date
 
 Do not remove or redesign template calculations. Preserve:
 
-* Column-sum row 43.
-* The `Subtotal` block on row 44 with `=SUM(U15:U42)`.
-* `Advances` on row 45.
-* The `Total` calculation on row 46 as `=(Subtotal-Advances)`.
+* Column-sum row 22.
+* The `Subtotal` block on row 23 with `=SUM(U15:U21)`.
+* `Advances` on row 24.
+* The `Total` calculation on row 25 as `=(Subtotal-Advances)`.
 * The three reference tabs: `Per Diem (USD$)`, `Per Diem (Mixed Currency)`, and `Expense Descriptions`.
 * The `Internal-Use Per Diem` calculator and its `VLOOKUP` formulas, unchanged.
 

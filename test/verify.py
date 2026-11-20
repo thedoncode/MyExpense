@@ -34,7 +34,7 @@ KINDS = {
     'itemized': {'template': 'itemized-expense-claim.xlsx', 'base': 0,
                  'data': refs('N2:N5', 'B10:O12', 'B14:O31')},
     'perdiem': {'template': 'perdiem-travel-expense.xlsx', 'base': 0,
-                'data': refs('N4:N8', 'B15:W42')},
+                'data': refs('N4:N8', 'B15:W21')},
 }
 
 def plain(v):

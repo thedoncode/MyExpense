@@ -212,8 +212,8 @@
     return V;
   }
 
-  // Expense report sheet: day rows 15-42, column sums on 43, subtotal 44, advances 45, total 46
-  const PD_FIRST = 15, PD_LAST = 42, PD_SUMS = 43, PD_SUBTOTAL = 44, PD_TOTAL = 46;
+  // Expense report sheet: one week, so seven day rows 15-21; column sums on 22, subtotal 23, advances 24, total 25
+  const PD_FIRST = 15, PD_LAST = 21, PD_SUMS = 22, PD_SUBTOTAL = 23, PD_TOTAL = 25;
   const PD_CATCOLS = ['G', 'H', 'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
   function perDiemCells(r, week) {
     const V = {};
