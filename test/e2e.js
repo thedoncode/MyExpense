@@ -361,7 +361,7 @@ const SIGNED_OUT = { id: null, level: 'view', signedIn: false };
     };
     const pdf = await grab('text=Bank statement PDF');
     const pageCount = (pdf.buf.toString('latin1').match(/\/Type \/Page[^s]/g) || []).length;
-    check(/Fabrikam Burbank Itemized Expenses .* Bank Statement\.pdf$/.test(pdf.name) && pdf.buf.subarray(0, 5).toString() === '%PDF-' && pageCount === 2, 'the statement downloads as its own PDF: ' + pdf.name + ' (' + pageCount + ' pages)');
+    check(/^Fabrikam Burbank - Itemized Expenses - \d{2}-[A-Z][a-z]{2}-\d{2} - Bank Statement\.pdf$/.test(pdf.name) && pdf.buf.subarray(0, 5).toString() === '%PDF-' && pageCount === 2, 'the statement downloads as its own PDF: ' + pdf.name + ' (' + pageCount + ' pages)');
     const zf = await grab('text=Statement files');
     const names = Object.keys((await JSZip.loadAsync(zf.buf)).files);
     check(/Bank Statement files\.zip$/.test(zf.name) && names.length === 1 && /^Statement 01 - statement\.jpg$/.test(names[0]), 'and the statement as uploaded: ' + zf.name + ' → ' + names.join(', '));
